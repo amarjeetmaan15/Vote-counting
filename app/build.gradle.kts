@@ -54,6 +54,14 @@ android {
       // AI Studio.
       signingConfig = signingConfigs.getByName("release")
     }
+    // Fast, non-debuggable build for on-device use (smooth scrolling). Signed with the same
+    // persistent debug key, so it installs over the existing app without losing data.
+    create("fast") {
+      initWith(getByName("release"))
+      isDebuggable = false
+      signingConfig = signingConfigs.getByName("persistentDebug")
+      matchingFallbacks += listOf("release")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

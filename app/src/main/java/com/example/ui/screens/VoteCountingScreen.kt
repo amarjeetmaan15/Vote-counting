@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -409,6 +411,7 @@ fun VoteCountingScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun VoterCountingCard(
     voter: Voter,
@@ -511,11 +514,12 @@ fun VoterCountingCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Candidate choices stay on one horizontally scrollable row
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            // Candidate choices wrap onto extra lines (no nested scroll inside the list item,
+            // which made vertical list scrolling stick).
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 candidates.forEach { candidate ->
                     val isSelected = voter.votedCandidateId == candidate.id

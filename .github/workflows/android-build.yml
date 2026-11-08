@@ -60,13 +60,13 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+      - name: Build fast (non-debuggable) APK
+        run: gradle --no-daemon assembleFast
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: vote-counting-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: vote-counting-fast-apk
+          path: app/build/outputs/apk/fast/*.apk
           if-no-files-found: error
           retention-days: 14
