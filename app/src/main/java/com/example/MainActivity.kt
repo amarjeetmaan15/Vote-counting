@@ -7,6 +7,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -87,7 +90,8 @@ fun VoteAppMain(
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 8.dp,
-                        modifier = Modifier.height(64.dp).testTag("check_voters_bottom_nav")
+                        windowInsets = WindowInsets(0, 0, 0, 0),
+                        modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars).height(64.dp).testTag("check_voters_bottom_nav")
                     ) {
                         NavigationBarItem(
                             selected = currentScreen == AppScreen.CHECK_VOTERS,
@@ -128,7 +132,8 @@ fun VoteAppMain(
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 8.dp,
-                        modifier = Modifier.height(64.dp).testTag("vote_counting_bottom_nav")
+                        windowInsets = WindowInsets(0, 0, 0, 0),
+                        modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars).height(64.dp).testTag("vote_counting_bottom_nav")
                     ) {
                         NavigationBarItem(
                             selected = currentScreen == AppScreen.VOTE_COUNTING,
