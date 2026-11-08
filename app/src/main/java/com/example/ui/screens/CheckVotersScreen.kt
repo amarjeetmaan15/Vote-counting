@@ -1,0 +1,500 @@
+package com.example.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.QuestionMark
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.data.entity.AttendanceStatus
+import com.example.data.entity.Voter
+import com.example.ui.CheckVotersUiState
+import com.example.ui.components.WardFilterRow
+import com.example.ui.theme.AmberTertiary
+import com.example.ui.theme.VoteGreen
+import com.example.ui.theme.VoteRed
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CheckVotersScreen(
+    state: CheckVotersUiState,
+    onBack: () -> Unit,
+    onSelectWard: (Int?) -> Unit,
+    onSearchChange: (String) -> Unit,
+    onToggleAttendance: (voterId: Long, currentStatus: AttendanceStatus, targetStatus: AttendanceStatus) -> Unit,
+    onResetAttendance: () -> Unit,
+    onNavigateToResults: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "Check Voters (मतदाता चेकिंग)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (state.selectedWard == null) "सभी वार्ड (ALL)" else "Ward ${state.selectedWard}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "वापस / Back"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToResults) {
+                        Icon(
+                            imageVector = Icons.Default.Assessment,
+                            contentDescription = "परिणाम / Results",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = { showResetDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "रीसेट / Reset",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .testTag("check_voters_screen")
+        ) {
+            // Common Ward Navigation Row (ALL, Ward 1, Ward 2...)
+            WardFilterRow(
+                availableWards = state.availableWards,
+                selectedWard = state.selectedWard,
+                onSelectWard = onSelectWard
+            )
+
+            // Check Voters Summary Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "कुल मतदाता: ${state.summary.totalVoters}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+
+                        val checkedTotal = state.summary.greenCount + state.summary.yellowCount + state.summary.redCount
+                        Text(
+                            text = "जाँच पूर्ण: $checkedTotal (${if (state.summary.totalVoters > 0) (checkedTotal * 100 / state.summary.totalVoters) else 0}%)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 4 Counts Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Green Count Box
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = VoteGreen, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text("${state.summary.greenCount}", fontWeight = FontWeight.Bold, color = VoteGreen)
+                                }
+                                Text("पक्ष में", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        // Yellow Count Box
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.QuestionMark, contentDescription = null, tint = AmberTertiary, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text("${state.summary.yellowCount}", fontWeight = FontWeight.Bold, color = AmberTertiary)
+                                }
+                                Text("संशय", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        // Red Count Box
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Close, contentDescription = null, tint = VoteRed, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text("${state.summary.redCount}", fontWeight = FontWeight.Bold, color = VoteRed)
+                                }
+                                Text("विपक्ष", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        // Not Checked Box
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("${state.summary.notCheckedCount}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text("बाकी", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Search Bar
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = onSearchChange,
+                placeholder = { Text("मतदाता का नाम, क्रमांक या EPIC खोजें...") },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .testTag("search_voter_field"),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            // Voters List
+            if (state.voters.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (state.searchQuery.isNotBlank()) "कोई मतदाता नहीं मिला" else "इस वार्ड में कोई मतदाता नहीं है",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("check_voters_list"),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(
+                        items = state.voters,
+                        key = { it.id }
+                    ) { voter ->
+                        VoterAttendanceCard(
+                            voter = voter,
+                            onToggleAttendance = { target ->
+                                onToggleAttendance(voter.id, voter.attendanceStatus, target)
+                            }
+                        )
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    // Reset Attendance Dialog
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("हाजिरी / रुझान रीसेट करें?") },
+            text = { Text("क्या आप सभी मतदाताओं की उपस्थिति स्थिति (Green/Yellow/Red) को हटाना चाहते हैं?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onResetAttendance()
+                        showResetDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("हाँ, रीसेट करें", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun VoterAttendanceCard(
+    voter: Voter,
+    onToggleAttendance: (AttendanceStatus) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ElevatedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("voter_card_${voter.id}"),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Voter Information Left Side
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "क्र. ${voter.serialNumber}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Ward ${voter.wardNumber}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = voter.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (voter.relativeName.isNotBlank()) {
+                    Text(
+                        text = "संबंधी: ${voter.relativeName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Text(
+                    text = if (voter.epicNumber.isNotBlank()) "EPIC: ${voter.epicNumber}" else "EPIC: -",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // Attendance Action Buttons: Green (✔), Yellow (~), Red (✖)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Green Button (उम्मीदवार का वोट)
+                val isGreen = voter.attendanceStatus == AttendanceStatus.GREEN
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (isGreen) VoteGreen else VoteGreen.copy(alpha = 0.12f))
+                        .border(
+                            width = if (isGreen) 2.dp else 1.dp,
+                            color = if (isGreen) VoteGreen else VoteGreen.copy(alpha = 0.4f),
+                            shape = CircleShape
+                        )
+                        .clickable { onToggleAttendance(AttendanceStatus.GREEN) }
+                        .testTag("btn_green_${voter.id}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Green Tick (पक्ष में)",
+                        tint = if (isGreen) Color.White else VoteGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Yellow Button (संशय / अनिश्चित)
+                val isYellow = voter.attendanceStatus == AttendanceStatus.YELLOW
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (isYellow) AmberTertiary else AmberTertiary.copy(alpha = 0.12f))
+                        .border(
+                            width = if (isYellow) 2.dp else 1.dp,
+                            color = if (isYellow) AmberTertiary else AmberTertiary.copy(alpha = 0.4f),
+                            shape = CircleShape
+                        )
+                        .clickable { onToggleAttendance(AttendanceStatus.YELLOW) }
+                        .testTag("btn_yellow_${voter.id}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QuestionMark,
+                        contentDescription = "Yellow Tick (संशय)",
+                        tint = if (isYellow) Color.White else AmberTertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Red Button (विपक्षी वोट)
+                val isRed = voter.attendanceStatus == AttendanceStatus.RED
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (isRed) VoteRed else VoteRed.copy(alpha = 0.12f))
+                        .border(
+                            width = if (isRed) 2.dp else 1.dp,
+                            color = if (isRed) VoteRed else VoteRed.copy(alpha = 0.4f),
+                            shape = CircleShape
+                        )
+                        .clickable { onToggleAttendance(AttendanceStatus.RED) }
+                        .testTag("btn_red_${voter.id}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Red Cross (विपक्ष में)",
+                        tint = if (isRed) Color.White else VoteRed,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Vote Counting",
+  "description": "Ward-wise offline vote counting application with automatic saving and real-time candidate results.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
