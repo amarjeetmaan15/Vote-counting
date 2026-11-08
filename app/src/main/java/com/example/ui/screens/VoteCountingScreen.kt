@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -92,9 +93,10 @@ fun VoteCountingScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
-                modifier = Modifier.height(56.dp),
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
                         text = "Vote Counting (वोट काउंटिंग)",
@@ -443,18 +445,6 @@ fun VoterCountingCard(
                     )
                 }
                 Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = if (voter.epicNumber.isNotBlank()) "EPIC: ${voter.epicNumber}" else "EPIC: -",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Clip
-                )
-                Spacer(modifier = Modifier.width(5.dp))
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
@@ -476,6 +466,20 @@ fun VoterCountingCard(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            Text(
+                text = if (voter.epicNumber.isNotBlank()) "EPIC: ${voter.epicNumber}" else "EPIC: -",
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                softWrap = true,
+                overflow = TextOverflow.Visible
+            )
 
             Spacer(modifier = Modifier.height(3.dp))
 
