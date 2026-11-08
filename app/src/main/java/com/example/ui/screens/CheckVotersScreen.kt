@@ -307,7 +307,8 @@ fun CheckVotersScreen(
                 ) {
                     items(
                         items = state.voters,
-                        key = { it.id }
+                        key = { it.id },
+                        contentType = { "voter" }
                     ) { voter ->
                         VoterAttendanceCard(
                             voter = voter,
