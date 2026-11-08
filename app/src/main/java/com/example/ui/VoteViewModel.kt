@@ -16,7 +16,9 @@ import com.example.util.ExcelReader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -153,7 +155,8 @@ class VoteViewModel(application: Application) : AndroidViewModel(application) {
             selectedWard = wardFilter,
             searchQuery = query
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CheckVotersUiState())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CheckVotersUiState())
 
     val voteCountingState: StateFlow<VoteCountingUiState> = combine(
         allVoters,
@@ -195,7 +198,8 @@ class VoteViewModel(application: Application) : AndroidViewModel(application) {
             candidateVoteCounts = countsMap,
             searchQuery = query
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), VoteCountingUiState())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), VoteCountingUiState())
 
     val resultsState: StateFlow<ResultsUiState> = combine(
         allVoters,
@@ -269,7 +273,8 @@ class VoteViewModel(application: Application) : AndroidViewModel(application) {
             wardVoteResults = wardVoteList,
             candidates = candidates
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ResultsUiState())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ResultsUiState())
 
     init {
         viewModelScope.launch {
