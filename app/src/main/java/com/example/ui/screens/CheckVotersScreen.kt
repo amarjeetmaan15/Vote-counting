@@ -89,6 +89,7 @@ fun CheckVotersScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                modifier = Modifier.height(48.dp),
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
@@ -273,7 +274,8 @@ fun CheckVotersScreen(
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 3.dp)
+                    .height(52.dp)
+                    .padding(horizontal = 12.dp, vertical = 1.dp)
                     .testTag("search_voter_field"),
                 shape = RoundedCornerShape(12.dp)
             )
