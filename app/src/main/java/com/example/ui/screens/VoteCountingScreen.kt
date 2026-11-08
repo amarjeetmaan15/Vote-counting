@@ -97,7 +97,6 @@ fun VoteCountingScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 modifier = Modifier.height(48.dp),
-                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
                         text = "Vote Counting (वोट काउंटिंग)",
