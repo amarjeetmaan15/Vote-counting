@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -83,7 +84,8 @@ fun VoteAppMain(
     val isVoteCountingFlow = currentScreen == AppScreen.VOTE_COUNTING || currentScreen == AppScreen.VOTE_COUNTING_RESULTS
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().statusBarsPadding(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             when {
                 // Check Voters Subsystem Bottom Bar
