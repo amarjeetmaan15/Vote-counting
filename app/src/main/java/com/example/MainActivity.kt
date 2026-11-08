@@ -280,6 +280,8 @@ fun VoteAppMain(
                 AppScreen.FILE -> {
                     FileManagementScreen(
                         onBack = { viewModel.currentScreen.value = AppScreen.HOME },
+                        hasLoadedData = allVoters.isNotEmpty(),
+                        onDeleteLoadedData = { viewModel.clearAllVoters() },
                         onUploadExcel = { uri ->
                             viewModel.loadExcelFromUri(context, uri) { success, message ->
                                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
