@@ -20,6 +20,9 @@ interface VoterDao {
     @Query("SELECT * FROM voters WHERE isDeleted = 0")
     suspend fun getAllVotersList(): List<Voter>
 
+    @Query("SELECT * FROM voters")
+    suspend fun getAllVotersIncludingDeleted(): List<Voter>
+
     @Query("SELECT COUNT(*) FROM voters WHERE isDeleted = 0")
     fun getTotalVotersCount(): Flow<Int>
 
