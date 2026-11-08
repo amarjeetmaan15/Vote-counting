@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Refresh
@@ -81,11 +82,13 @@ fun VoteCountingScreen(
     onSetupCandidates: (List<String>) -> Unit,
     onResetVotes: () -> Unit,
     onNavigateToResults: () -> Unit,
+    onDeleteVoter: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showSetupCandidatesDialog by remember { mutableStateOf(false) }
     var candidateNamesInput by remember { mutableStateOf("") }
     var showResetVotesDialog by remember { mutableStateOf(false) }
+    var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -287,7 +290,8 @@ fun VoteCountingScreen(
                             candidates = state.candidates,
                             onSelectCandidate = { candidateId ->
                                 onSelectCandidateForVoter(voter.id, voter.votedCandidateId, candidateId)
-                            }
+                            },
+                            onDelete = { voterToRecycle = voter }
                         )
                     }
 
@@ -367,6 +371,32 @@ fun VoteCountingScreen(
             }
         )
     }
+
+    // Send to Recycle Bin Dialog
+    if (voterToRecycle != null) {
+        val target = voterToRecycle!!
+        AlertDialog(
+            onDismissRequest = { voterToRecycle = null },
+            title = { Text("रीसायकल बिन में भेजें?") },
+            text = { Text("क्या आप \"${target.name}\" (क्र. ${target.serialNumber}) को रीसायकल बिन में भेजना चाहते हैं? आप इसे होम स्क्रीन के रीसायकल बिन से कभी भी वापस ला सकते हैं।") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteVoter(target.id)
+                        voterToRecycle = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("रीसायकल बिन में भेजें", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { voterToRecycle = null }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -375,6 +405,7 @@ fun VoterCountingCard(
     voter: Voter,
     candidates: List<Candidate>,
     onSelectCandidate: (Long) -> Unit,
+    onDelete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -424,6 +455,20 @@ fun VoterCountingCard(
                             text = "Ward ${voter.wardNumber}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "रीसायकल बिन में भेजें",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

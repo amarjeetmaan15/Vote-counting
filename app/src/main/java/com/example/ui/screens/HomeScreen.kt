@@ -28,12 +28,15 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.QuestionMark
+import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -72,10 +75,13 @@ import com.example.util.ExcelReader
 fun HomeScreen(
     voters: List<Voter>,
     wardsCount: Int,
+    deletedCount: Int = 0,
     onNavigateToCheckVoters: () -> Unit,
     onNavigateToVoteCounting: () -> Unit,
+    onNavigateToRecycleBin: () -> Unit,
     onFileSelected: (Uri) -> Unit,
     onLoadSampleData: () -> Unit,
+    onMoveAllToRecycleBin: () -> Unit,
     onClearAllData: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -519,27 +525,139 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // Section 3: Recycle Bin Card
+        item {
+            Card(
+                onClick = onNavigateToRecycleBin,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("card_recycle_bin"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (deletedCount > 0) VoteRed.copy(alpha = 0.15f)
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (deletedCount > 0) Icons.Default.RestoreFromTrash else Icons.Default.DeleteSweep,
+                                contentDescription = "रीसायकल बिन",
+                                tint = if (deletedCount > 0) VoteRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "रीसायकल बिन (Recycle Bin)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (deletedCount > 0) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(VoteRed)
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "$deletedCount",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.surface
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = if (deletedCount > 0) "$deletedCount हटाए गए मतदाता सुरक्षित हैं (क्लिक करके रिस्टोर करें)"
+                                else "यहाँ हटाए गए मतदाता सुरक्षित रहते हैं (खाली)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
-    // Clear Confirmation Dialog
+    // Clear Confirmation Dialog with Safe Recycle Bin Option
     if (showClearConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showClearConfirmDialog = false },
-            title = { Text("डेटा रीसेट करें?") },
-            text = { Text("क्या आप ऐप से सभी वोटर्स, वार्ड और रिकॉर्ड हटाना चाहते हैं? इसके बाद आप नई Excel फाइल अपलोड कर सकते हैं।") },
+            title = {
+                Text(
+                    text = "डेटा रीसेट या रीसायकल बिन?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text("क्या आप वर्तमान मतदाताओं को हटाना चाहते हैं?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "• 'रीसायकल बिन में भेजें': मतदाता सुरक्षित रहेंगे और आप रीसायकल बिन से जब चाहें उन्हें वापस रिस्टोर कर सकेंगे।\n• 'स्थायी हटाएं': डेटाबेस से पूरी तरह मिट जाएगा।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
             confirmButton = {
-                Button(
-                    onClick = {
-                        onClearAllData()
-                        showClearConfirmDialog = false
-                        Toast.makeText(context, "डेटा रीसेट कर दिया गया है", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("हाँ, हटाएं", fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            onMoveAllToRecycleBin()
+                            showClearConfirmDialog = false
+                            Toast.makeText(context, "मतदाताओं को रीसायकल बिन में सुरक्षित भेजा गया", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("रीसायकल बिन में भेजें", fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            onClearAllData()
+                            showClearConfirmDialog = false
+                            Toast.makeText(context, "डेटा स्थायी रूप से हटा दिया गया", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("स्थायी हटाएं", fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {

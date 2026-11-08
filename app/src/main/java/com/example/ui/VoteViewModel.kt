@@ -24,7 +24,8 @@ enum class AppScreen {
     CHECK_VOTERS,
     CHECK_VOTERS_RESULTS,
     VOTE_COUNTING,
-    VOTE_COUNTING_RESULTS
+    VOTE_COUNTING_RESULTS,
+    RECYCLE_BIN
 }
 
 data class CheckSummary(
@@ -105,6 +106,12 @@ class VoteViewModel(application: Application) : AndroidViewModel(application) {
 
     val distinctWardNumbers: StateFlow<List<Int>> = repository.distinctWardNumbers
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val deletedVoters: StateFlow<List<Voter>> = repository.deletedVoters
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val deletedCount: StateFlow<Int> = repository.deletedVotersCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val checkVotersState: StateFlow<CheckVotersUiState> = combine(
         allVoters,
@@ -341,6 +348,43 @@ class VoteViewModel(application: Application) : AndroidViewModel(application) {
     fun clearAllVoters() {
         viewModelScope.launch {
             repository.clearAllVotersData()
+        }
+    }
+
+    // Recycle Bin functions
+    fun softDeleteVoter(voterId: Long) {
+        viewModelScope.launch {
+            repository.softDeleteVoter(voterId)
+        }
+    }
+
+    fun moveAllToRecycleBin() {
+        viewModelScope.launch {
+            repository.moveAllToRecycleBin()
+        }
+    }
+
+    fun restoreVoter(voterId: Long) {
+        viewModelScope.launch {
+            repository.restoreVoter(voterId)
+        }
+    }
+
+    fun restoreAllFromRecycleBin() {
+        viewModelScope.launch {
+            repository.restoreAllDeletedVoters()
+        }
+    }
+
+    fun permanentlyDeleteVoter(voterId: Long) {
+        viewModelScope.launch {
+            repository.permanentlyDeleteVoter(voterId)
+        }
+    }
+
+    fun emptyRecycleBin() {
+        viewModelScope.launch {
+            repository.emptyRecycleBin()
         }
     }
 }

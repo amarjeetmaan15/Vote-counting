@@ -35,6 +35,7 @@ import com.example.ui.VoteViewModel
 import com.example.ui.screens.CheckVotersResultsScreen
 import com.example.ui.screens.CheckVotersScreen
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.RecycleBinScreen
 import com.example.ui.screens.VoteCountingResultsScreen
 import com.example.ui.screens.VoteCountingScreen
 import com.example.ui.theme.MyApplicationTheme
@@ -62,6 +63,8 @@ fun VoteAppMain(
     val checkState by viewModel.checkVotersState.collectAsStateWithLifecycle()
     val voteState by viewModel.voteCountingState.collectAsStateWithLifecycle()
     val resultsState by viewModel.resultsState.collectAsStateWithLifecycle()
+    val deletedVoters by viewModel.deletedVoters.collectAsStateWithLifecycle()
+    val deletedCount by viewModel.deletedCount.collectAsStateWithLifecycle()
 
     // BackHandler to return to HOME screen from any sub-screen
     if (currentScreen != AppScreen.HOME) {
@@ -170,6 +173,7 @@ fun VoteAppMain(
                     HomeScreen(
                         voters = allVoters,
                         wardsCount = distinctWards.size,
+                        deletedCount = deletedCount,
                         onNavigateToCheckVoters = {
                             if (allVoters.isNotEmpty()) {
                                 viewModel.currentScreen.value = AppScreen.CHECK_VOTERS
@@ -184,6 +188,9 @@ fun VoteAppMain(
                                 Toast.makeText(context, "कृपया पहले Excel अपलोड करें या नमूना डेटा लोड करें", Toast.LENGTH_SHORT).show()
                             }
                         },
+                        onNavigateToRecycleBin = {
+                            viewModel.currentScreen.value = AppScreen.RECYCLE_BIN
+                        },
                         onFileSelected = { uri ->
                             viewModel.loadExcelFromUri(context, uri) { success, msg ->
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -194,6 +201,7 @@ fun VoteAppMain(
                                 Toast.makeText(context, "45 मतदाताओं और 3 वार्डों का नमूना डेटा लोड हो गया!", Toast.LENGTH_SHORT).show()
                             }
                         },
+                        onMoveAllToRecycleBin = { viewModel.moveAllToRecycleBin() },
                         onClearAllData = { viewModel.clearAllVoters() }
                     )
                 }
@@ -209,7 +217,8 @@ fun VoteAppMain(
                             viewModel.toggleVoterAttendance(voterId, currentStatus, targetStatus)
                         },
                         onResetAttendance = { viewModel.resetAttendance() },
-                        onNavigateToResults = { viewModel.currentScreen.value = AppScreen.CHECK_VOTERS_RESULTS }
+                        onNavigateToResults = { viewModel.currentScreen.value = AppScreen.CHECK_VOTERS_RESULTS },
+                        onDeleteVoter = { voterId -> viewModel.softDeleteVoter(voterId) }
                     )
                 }
 
@@ -234,7 +243,8 @@ fun VoteAppMain(
                         },
                         onSetupCandidates = { names -> viewModel.setCandidateList(names) },
                         onResetVotes = { viewModel.resetVotes() },
-                        onNavigateToResults = { viewModel.currentScreen.value = AppScreen.VOTE_COUNTING_RESULTS }
+                        onNavigateToResults = { viewModel.currentScreen.value = AppScreen.VOTE_COUNTING_RESULTS },
+                        onDeleteVoter = { voterId -> viewModel.softDeleteVoter(voterId) }
                     )
                 }
 
@@ -244,6 +254,18 @@ fun VoteAppMain(
                         state = resultsState,
                         allVoters = allVoters,
                         onBack = { viewModel.currentScreen.value = AppScreen.VOTE_COUNTING }
+                    )
+                }
+
+                // Recycle Bin Screen
+                AppScreen.RECYCLE_BIN -> {
+                    RecycleBinScreen(
+                        deletedVoters = deletedVoters,
+                        onBack = { viewModel.currentScreen.value = AppScreen.HOME },
+                        onRestoreVoter = { voterId -> viewModel.restoreVoter(voterId) },
+                        onRestoreAll = { viewModel.restoreAllFromRecycleBin() },
+                        onPermanentlyDeleteVoter = { voterId -> viewModel.permanentlyDeleteVoter(voterId) },
+                        onEmptyRecycleBin = { viewModel.emptyRecycleBin() }
                     )
                 }
             }

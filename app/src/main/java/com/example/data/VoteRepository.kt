@@ -24,6 +24,8 @@ class VoteRepository(
     val distinctWardNumbers: Flow<List<Int>> = voterDao.getDistinctWardNumbersFlow()
     val allCandidates: Flow<List<Candidate>> = candidateDao.getAllCandidates()
     val allWards: Flow<List<Ward>> = wardDao.getAllWards()
+    val deletedVoters: Flow<List<Voter>> = voterDao.getDeletedVoters()
+    val deletedVotersCount: Flow<Int> = voterDao.getDeletedVotersCount()
 
     fun getVotersByWard(wardNumber: Int): Flow<List<Voter>> {
         return voterDao.getVotersByWard(wardNumber)
@@ -128,5 +130,30 @@ class VoteRepository(
             candidateDao.insertCandidate(Candidate(name = "Candidate 1", candidateNumber = 1))
             candidateDao.insertCandidate(Candidate(name = "Candidate 2", candidateNumber = 2))
         }
+    }
+
+    // Recycle Bin methods
+    suspend fun softDeleteVoter(voterId: Long) = withContext(Dispatchers.IO) {
+        voterDao.softDeleteVoter(voterId)
+    }
+
+    suspend fun moveAllToRecycleBin() = withContext(Dispatchers.IO) {
+        voterDao.moveAllToRecycleBin()
+    }
+
+    suspend fun restoreVoter(voterId: Long) = withContext(Dispatchers.IO) {
+        voterDao.restoreVoter(voterId)
+    }
+
+    suspend fun restoreAllDeletedVoters() = withContext(Dispatchers.IO) {
+        voterDao.restoreAllDeletedVoters()
+    }
+
+    suspend fun permanentlyDeleteVoter(voterId: Long) = withContext(Dispatchers.IO) {
+        voterDao.permanentlyDeleteVoter(voterId)
+    }
+
+    suspend fun emptyRecycleBin() = withContext(Dispatchers.IO) {
+        voterDao.emptyRecycleBin()
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -74,9 +75,11 @@ fun CheckVotersScreen(
     onToggleAttendance: (voterId: Long, currentStatus: AttendanceStatus, targetStatus: AttendanceStatus) -> Unit,
     onResetAttendance: () -> Unit,
     onNavigateToResults: () -> Unit,
+    onDeleteVoter: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showResetDialog by remember { mutableStateOf(false) }
+    var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -299,7 +302,8 @@ fun CheckVotersScreen(
                             voter = voter,
                             onToggleAttendance = { target ->
                                 onToggleAttendance(voter.id, voter.attendanceStatus, target)
-                            }
+                            },
+                            onDelete = { voterToRecycle = voter }
                         )
                     }
 
@@ -335,12 +339,39 @@ fun CheckVotersScreen(
             }
         )
     }
+
+    // Send to Recycle Bin Dialog
+    if (voterToRecycle != null) {
+        val target = voterToRecycle!!
+        AlertDialog(
+            onDismissRequest = { voterToRecycle = null },
+            title = { Text("रीसायकल बिन में भेजें?") },
+            text = { Text("क्या आप \"${target.name}\" (क्र. ${target.serialNumber}) को रीसायकल बिन में भेजना चाहते हैं? आप इसे होम स्क्रीन के रीसायकल बिन से कभी भी वापस ला सकते हैं।") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteVoter(target.id)
+                        voterToRecycle = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("रीसायकल बिन में भेजें", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { voterToRecycle = null }) {
+                    Text("रद्द करें")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun VoterAttendanceCard(
     voter: Voter,
     onToggleAttendance: (AttendanceStatus) -> Unit,
+    onDelete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -388,6 +419,20 @@ fun VoterAttendanceCard(
                             text = "Ward ${voter.wardNumber}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "रीसायकल बिन में भेजें",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

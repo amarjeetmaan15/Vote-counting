@@ -171,4 +171,51 @@ class ExampleRobolectricTest {
         assertTrue(voteText.contains("NOTA"))
         assertTrue(voteText.contains("Ward 1"))
     }
+
+    @Test
+    fun testRecycleBinOperations() = runBlocking {
+        repository.loadSampleVoters()
+        val initialVoters = repository.allVoters.first()
+        assertEquals(45, initialVoters.size)
+
+        val target = initialVoters[0]
+
+        // 1. Soft delete voter (move to Recycle Bin)
+        repository.softDeleteVoter(target.id)
+        var activeVoters = repository.allVoters.first()
+        var deletedVoters = repository.deletedVoters.first()
+        assertEquals(44, activeVoters.size)
+        assertEquals(1, deletedVoters.size)
+        assertEquals(target.id, deletedVoters[0].id)
+        assertTrue(deletedVoters[0].isDeleted)
+
+        // 2. Restore voter from Recycle Bin
+        repository.restoreVoter(target.id)
+        activeVoters = repository.allVoters.first()
+        deletedVoters = repository.deletedVoters.first()
+        assertEquals(45, activeVoters.size)
+        assertEquals(0, deletedVoters.size)
+
+        // 3. Move all to Recycle Bin
+        repository.moveAllToRecycleBin()
+        activeVoters = repository.allVoters.first()
+        deletedVoters = repository.deletedVoters.first()
+        assertEquals(0, activeVoters.size)
+        assertEquals(45, deletedVoters.size)
+
+        // 4. Restore all from Recycle Bin
+        repository.restoreAllDeletedVoters()
+        activeVoters = repository.allVoters.first()
+        deletedVoters = repository.deletedVoters.first()
+        assertEquals(45, activeVoters.size)
+        assertEquals(0, deletedVoters.size)
+
+        // 5. Soft delete and empty recycle bin
+        repository.softDeleteVoter(target.id)
+        repository.emptyRecycleBin()
+        activeVoters = repository.allVoters.first()
+        deletedVoters = repository.deletedVoters.first()
+        assertEquals(44, activeVoters.size)
+        assertEquals(0, deletedVoters.size)
+    }
 }

@@ -15,7 +15,7 @@ import com.example.data.entity.WardVote
 
 @Database(
     entities = [Voter::class, Candidate::class, Ward::class, WardVote::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
