@@ -24,130 +24,154 @@ object ExcelReader {
     )
 
     fun parseExcelOrCsv(context: Context, uri: Uri): ParsedVoterData {
-        val contentResolver = context.contentResolver
-        val mimeType = contentResolver.getType(uri) ?: ""
-        val fileName = uri.lastPathSegment?.lowercase() ?: ""
-
-        // Check if file is XLSX (ZIP archive)
+        val resolver = context.contentResolver
+        val mimeType = resolver.getType(uri).orEmpty().lowercase()
+        val fileName = uri.lastPathSegment.orEmpty().lowercase()
         val isXlsx = fileName.endsWith(".xlsx") ||
-                mimeType.contains("spreadsheetml", ignoreCase = true) ||
-                mimeType.contains("excel", ignoreCase = true)
+            mimeType.contains("spreadsheetml") || mimeType.contains("excel")
 
-        val rawRows: List<List<String>> = try {
-            if (isXlsx) {
-                contentResolver.openInputStream(uri)?.use { parseXlsx(it) } ?: emptyList()
-            } else {
-                contentResolver.openInputStream(uri)?.use { parseCsv(it) } ?: emptyList()
-            }
-        } catch (e: Exception) {
-            // Fallback: try parsing as CSV in case it was a renamed text file
-            try {
-                contentResolver.openInputStream(uri)?.use { parseCsv(it) } ?: emptyList()
-            } catch (fallbackEx: Exception) {
-                emptyList()
-            }
-        }
+        val rows = resolver.openInputStream(uri)?.use { input ->
+            if (isXlsx) parseXlsx(input) else parseCsv(input)
+        } ?: emptyList()
 
-        return processRowsToVoters(rawRows)
+        return processRowsToVoters(rows)
+    }
+
+    private data class ColumnMap(
+        val serial: Int = 0,
+        val name: Int = 1,
+        val relative: Int = 2,
+        val epic: Int = 3,
+        val ward: Int = 4
+    )
+
+    private fun normalizeHeader(value: String): String =
+        value.trim().lowercase()
+            .replace("\uFEFF", "")
+            .replace(Regex("[^a-z0-9\\u0900-\\u097F]+"), " ")
+            .replace(Regex("\\s+"), " ")
+
+    private fun headerKind(value: String): String? {
+        val h = normalizeHeader(value)
+        if (h.isBlank()) return null
+
+        if (listOf("epic", "epic no", "epic number", "voter id", "voter identity",
+                "identity card", "मतदाता पहचान", "पहचान पत्र", "निर्वाचक फोटो पहचान",
+                "मतदाता परिचय").any { h.contains(it) }) return "epic"
+
+        if (listOf("ward", "ward no", "ward number", "वार्ड", "वार्ड नंबर",
+                "वार्ड क्रमांक").any { h.contains(it) }) return "ward"
+
+        if (listOf("father", "father name", "mother", "mother name", "husband",
+                "husband name", "relative", "relation", "guardian", "पिता", "पिताजी",
+                "माता", "माताजी", "पति", "अभिभावक", "रिश्तेदार").any { h.contains(it) }) return "relative"
+
+        if (listOf("serial", "serial no", "serial number", "sr no", "sr number",
+                "s no", "क्रमांक", "क्रम संख्या", "क्र सं", "क्र.सं", "अनुक्रमांक",
+                "मतदाता क्रम").any { h.contains(it) }) return "serial"
+
+        if (listOf("voter name", "name of voter", "elector name", "मतदाता का नाम",
+                "मतदाता नाम", "निर्वाचक का नाम", "नाम").any { h == it || h.contains(it) }) return "name"
+
+        return null
     }
 
     private fun processRowsToVoters(rows: List<List<String>>): ParsedVoterData {
         if (rows.isEmpty()) return ParsedVoterData(emptyList(), emptyList())
 
-        // Detect header row if present
-        var startIndex = 0
-        var serialCol = 0
-        var nameCol = 1
-        var relativeCol = 2
-        var epicCol = 3
-        var wardCol = 4
-
-        val firstRow = rows.first()
-        val hasHeader = firstRow.any { cell ->
-            val lower = cell.lowercase()
-            lower.contains("serial") || lower.contains("sr") || lower.contains("क्रम") ||
-                    lower.contains("voter") || lower.contains("name") || lower.contains("नाम") ||
-                    lower.contains("father") || lower.contains("husband") || lower.contains("पिता") ||
-                    lower.contains("epic") || lower.contains("ward") || lower.contains("वार्ड")
-        }
-
-        if (hasHeader) {
-            startIndex = 1
-            firstRow.forEachIndexed { index, cell ->
-                val lower = cell.lowercase().trim()
-                when {
-                    lower.contains("serial") || lower.contains("sr") || lower.contains("क्रम") -> serialCol = index
-                    lower.contains("epic") || lower.contains("voter id") || lower.contains("पहचान") -> epicCol = index
-                    lower.contains("ward") || lower.contains("वार्ड") -> wardCol = index
-                    lower.contains("father") || lower.contains("mother") || lower.contains("husband") || lower.contains("relative") || lower.contains("पिता") || lower.contains("पति") -> relativeCol = index
-                    lower.contains("name") || lower.contains("voter") || lower.contains("नाम") -> nameCol = index
-                }
+        // Look for a real header row in the first ten rows; voter rolls often have title rows above it.
+        var headerIndex = -1
+        var bestHeaderScore = 0
+        for (i in 0 until minOf(rows.size, 10)) {
+            val kinds = rows[i].mapNotNull(::headerKind).toSet()
+            val score = kinds.size
+            if (score > bestHeaderScore) {
+                bestHeaderScore = score
+                headerIndex = i
             }
         }
 
-        val votersList = mutableListOf<Voter>()
-        val wardsSet = sortedSetOf<Int>()
+        val columns = if (bestHeaderScore >= 2) {
+            val mapped = mutableMapOf<String, Int>()
+            rows[headerIndex].forEachIndexed { index, cell ->
+                val kind = headerKind(cell)
+                if (kind != null && kind !in mapped) mapped[kind] = index
+            }
+            ColumnMap(
+                serial = mapped["serial"] ?: 0,
+                name = mapped["name"] ?: 1,
+                relative = mapped["relative"] ?: 2,
+                epic = mapped["epic"] ?: 3,
+                ward = mapped["ward"] ?: 4
+            )
+        } else {
+            // Headerless files must follow the app's documented five-column template.
+            ColumnMap()
+        }
 
-        for (i in startIndex until rows.size) {
-            val row = rows[i]
+        val startIndex = if (headerIndex >= 0 && bestHeaderScore >= 2) headerIndex + 1 else 0
+        val voters = mutableListOf<Voter>()
+        val wards = sortedSetOf<Int>()
+
+        for (rowIndex in startIndex until rows.size) {
+            val row = rows[rowIndex]
             if (row.all { it.isBlank() }) continue
+            // Ignore repeated header rows found in files assembled from multiple ward sheets.
+            if (row.any { headerKind(it) == "name" } &&
+                row.any { headerKind(it) == "serial" || headerKind(it) == "ward" }) continue
 
-            val serialVal = row.getOrNull(serialCol)?.trim().takeIf { !it.isNullOrBlank() } ?: "${votersList.size + 1}"
-            val nameVal = row.getOrNull(nameCol)?.trim().takeIf { !it.isNullOrBlank() } ?: "Voter $serialVal"
-            val relativeVal = row.getOrNull(relativeCol)?.trim() ?: ""
-            val epicVal = row.getOrNull(epicCol)?.trim() ?: ""
-            val wardRaw = row.getOrNull(wardCol)?.trim() ?: "1"
+            val serialRaw = row.getOrNull(columns.serial).orEmpty().trim()
+            val nameRaw = row.getOrNull(columns.name).orEmpty().trim()
+            val relativeRaw = row.getOrNull(columns.relative).orEmpty().trim()
+            val epicRaw = row.getOrNull(columns.epic).orEmpty().trim()
+            val wardRaw = row.getOrNull(columns.ward).orEmpty().trim()
 
-            val wardNum = extractWardNumber(wardRaw)
-            wardsSet.add(wardNum)
+            // A row must contain a voter name. Do not manufacture fake "Voter 123" records.
+            if (nameRaw.isBlank()) continue
+            val serial = cleanNumberString(serialRaw.ifBlank { (voters.size + 1).toString() })
+            val ward = extractWardNumber(wardRaw)
+            if (ward > 0) wards.add(ward)
 
-            votersList.add(
+            voters.add(
                 Voter(
-                    serialNumber = cleanNumberString(serialVal),
-                    name = nameVal,
-                    relativeName = relativeVal,
-                    epicNumber = epicVal,
-                    wardNumber = wardNum,
+                    serialNumber = serial,
+                    name = nameRaw,
+                    relativeName = relativeRaw,
+                    epicNumber = epicRaw,
+                    wardNumber = ward,
                     attendanceStatus = AttendanceStatus.NONE,
                     votedCandidateId = null
                 )
             )
         }
 
-        return ParsedVoterData(votersList, wardsSet.toList())
+        return ParsedVoterData(voters, wards.toList())
     }
 
-    private fun extractWardNumber(wardStr: String): Int {
-        val digits = wardStr.filter { it.isDigit() }
-        val parsed = digits.toIntOrNull()
-        return if (parsed != null && parsed > 0) parsed else 1
+    private fun extractWardNumber(raw: String): Int {
+        val normalized = raw.trim()
+            .replace('०', '0').replace('१', '1').replace('२', '2')
+            .replace('३', '3').replace('४', '4').replace('५', '5')
+            .replace('६', '6').replace('७', '7').replace('८', '8')
+            .replace('९', '9')
+        val digits = normalized.filter { it.isDigit() }
+        return digits.toIntOrNull()?.takeIf { it > 0 } ?: 0
     }
 
     private fun cleanNumberString(raw: String): String {
-        val floatVal = raw.toDoubleOrNull()
-        return if (floatVal != null && floatVal == floatVal.toLong().toDouble()) {
-            floatVal.toLong().toString()
-        } else {
-            raw
-        }
+        val value = raw.trim()
+        val numeric = value.toDoubleOrNull()
+        return if (numeric != null && numeric.isFinite() &&
+            numeric == numeric.toLong().toDouble()) numeric.toLong().toString() else value
     }
 
-    // --- CSV PARSER ---
     fun parseCsv(inputStream: InputStream): List<List<String>> {
         val reader = BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8))
         val rows = mutableListOf<List<String>>()
-
         var line: String? = reader.readLine()
-        // Strip BOM if present
-        if (line != null && line.startsWith("\uFEFF")) {
-            line = line.substring(1)
-        }
-
         while (line != null) {
-            if (line.isNotBlank()) {
-                val cells = parseCsvLine(line)
-                rows.add(cells)
-            }
+            val cleanLine = line.removePrefix("\uFEFF")
+            if (cleanLine.isNotBlank()) rows.add(parseCsvLine(cleanLine))
             line = reader.readLine()
         }
         return rows
@@ -155,144 +179,151 @@ object ExcelReader {
 
     private fun parseCsvLine(line: String): List<String> {
         val result = mutableListOf<String>()
-        val curVal = StringBuilder()
-        var inQuotes = false
-
-        val delimiter = if (line.contains("\t")) '\t' else if (line.contains(";") && !line.contains(",")) ';' else ','
-
-        for (ch in line) {
-            if (ch == '\"') {
-                inQuotes = !inQuotes
-            } else if (ch == delimiter && !inQuotes) {
-                result.add(curVal.toString().trim())
-                curVal.setLength(0)
-            } else {
-                curVal.append(ch)
-            }
+        val value = StringBuilder()
+        var quoted = false
+        val delimiter = when {
+            line.contains('\t') -> '\t'
+            line.contains(';') && !line.contains(',') -> ';'
+            else -> ','
         }
-        result.add(curVal.toString().trim())
+        var index = 0
+        while (index < line.length) {
+            val ch = line[index]
+            when {
+                ch == '"' && quoted && index + 1 < line.length && line[index + 1] == '"' -> {
+                    value.append('"'); index++
+                }
+                ch == '"' -> quoted = !quoted
+                ch == delimiter && !quoted -> {
+                    result.add(value.toString().trim()); value.setLength(0)
+                }
+                else -> value.append(ch)
+            }
+            index++
+        }
+        result.add(value.toString().trim())
         return result
     }
 
-    // --- PURE JAVA XLSX PARSER ---
+    // XLSX is a ZIP of XML files. Preserve cell references so omitted/blank cells
+    // do not shift later values into the wrong voter fields.
     private fun parseXlsx(inputStream: InputStream): List<List<String>> {
-        val sharedStrings = mutableListOf<String>()
-        var sheetXmlBytes: ByteArray? = null
-
-        val zip = ZipInputStream(inputStream)
-        var entry = zip.nextEntry
-        while (entry != null) {
-            val name = entry.name.lowercase()
-            if (name.endsWith("sharedstrings.xml")) {
-                sharedStrings.addAll(parseSharedStrings(zip))
-            } else if (name.endsWith("sheet1.xml") || (name.contains("sheet") && name.endsWith(".xml") && sheetXmlBytes == null)) {
-                sheetXmlBytes = zip.readBytes()
+        var sharedStringsBytes: ByteArray? = null
+        var sheetBytes: ByteArray? = null
+        ZipInputStream(inputStream).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                val entryName = entry.name.lowercase()
+                when {
+                    entryName.endsWith("sharedstrings.xml") -> sharedStringsBytes = zip.readBytes()
+                    entryName.matches(Regex("xl/worksheets/sheet\\d+\\.xml")) && sheetBytes == null ->
+                        sheetBytes = zip.readBytes()
+                }
+                zip.closeEntry()
+                entry = zip.nextEntry
             }
-            zip.closeEntry()
-            entry = zip.nextEntry
         }
-
-        if (sheetXmlBytes == null) return emptyList()
-
-        return parseSheetXml(ByteArrayInputStream(sheetXmlBytes), sharedStrings)
+        val strings = sharedStringsBytes?.let { parseSharedStrings(ByteArrayInputStream(it)) }.orEmpty()
+        val bytes = sheetBytes ?: return emptyList()
+        return parseSheetXml(ByteArrayInputStream(bytes), strings)
     }
 
+    private fun localName(name: String?): String =
+        name.orEmpty().substringAfterLast(':')
+
     private fun parseSharedStrings(stream: InputStream): List<String> {
-        val strings = mutableListOf<String>()
+        val values = mutableListOf<String>()
         val parser = XmlPullParserFactory.newInstance().newPullParser()
         parser.setInput(stream, "UTF-8")
-
-        var eventType = parser.eventType
+        var current = StringBuilder()
+        var inItem = false
         var inText = false
-        val currentText = StringBuilder()
-
-        while (eventType != XmlPullParser.END_DOCUMENT) {
-            when (eventType) {
-                XmlPullParser.START_TAG -> {
-                    if (parser.name.equals("t", ignoreCase = true)) {
-                        inText = true
-                        currentText.setLength(0)
-                    }
+        var event = parser.eventType
+        while (event != XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                XmlPullParser.START_TAG -> when (localName(parser.name)) {
+                    "si" -> { current = StringBuilder(); inItem = true }
+                    "t" -> inText = true
                 }
-                XmlPullParser.TEXT -> {
-                    if (inText) {
-                        currentText.append(parser.text)
-                    }
-                }
-                XmlPullParser.END_TAG -> {
-                    if (parser.name.equals("t", ignoreCase = true)) {
-                        inText = false
-                        strings.add(currentText.toString())
-                    }
+                XmlPullParser.TEXT, XmlPullParser.CDSECT -> if (inItem && inText) current.append(parser.text)
+                XmlPullParser.END_TAG -> when (localName(parser.name)) {
+                    "t" -> inText = false
+                    "si" -> { values.add(current.toString()); inItem = false }
                 }
             }
-            eventType = parser.next()
+            event = parser.next()
         }
-        return strings
+        return values
+    }
+
+    private fun columnIndex(cellReference: String?): Int {
+        val letters = cellReference.orEmpty().takeWhile { it.isLetter() }.uppercase()
+        if (letters.isEmpty()) return -1
+        var result = 0
+        for (ch in letters) result = result * 26 + (ch - 'A' + 1)
+        return result - 1
     }
 
     private fun parseSheetXml(stream: InputStream, sharedStrings: List<String>): List<List<String>> {
         val rows = mutableListOf<List<String>>()
         val parser = XmlPullParserFactory.newInstance().newPullParser()
         parser.setInput(stream, "UTF-8")
+        var rowCells: MutableMap<Int, String>? = null
+        var nextColumn = 0
+        var cellColumn = -1
+        var cellType = ""
+        var inValue = false
+        var inInlineText = false
+        var cellValue = StringBuilder()
+        var event = parser.eventType
 
-        var eventType = parser.eventType
-        var currentRow = mutableListOf<String>()
-        var currentCellVal = StringBuilder()
-        var isSharedString = false
-        var insideValue = false
-
-        while (eventType != XmlPullParser.END_DOCUMENT) {
-            when (eventType) {
-                XmlPullParser.START_TAG -> {
-                    when (parser.name.lowercase()) {
-                        "row" -> {
-                            currentRow = mutableListOf()
+        while (event != XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                XmlPullParser.START_TAG -> when (localName(parser.name)) {
+                    "row" -> { rowCells = mutableMapOf(); nextColumn = 0 }
+                    "c" -> {
+                        cellColumn = columnIndex(parser.getAttributeValue(null, "r")).let {
+                            if (it >= 0) it else nextColumn
                         }
-                        "c" -> {
-                            val type = parser.getAttributeValue(null, "t")
-                            isSharedString = type == "s"
-                            currentCellVal.setLength(0)
-                        }
-                        "v" -> {
-                            insideValue = true
-                        }
+                        nextColumn = cellColumn + 1
+                        cellType = parser.getAttributeValue(null, "t").orEmpty()
+                        cellValue = StringBuilder()
                     }
+                    "v" -> inValue = true
+                    "t" -> if (cellType == "inlineStr") inInlineText = true
                 }
-                XmlPullParser.TEXT -> {
-                    if (insideValue) {
-                        currentCellVal.append(parser.text)
+                XmlPullParser.TEXT, XmlPullParser.CDSECT -> {
+                    if (inValue || inInlineText) cellValue.append(parser.text)
+                }
+                XmlPullParser.END_TAG -> when (localName(parser.name)) {
+                    "v" -> inValue = false
+                    "t" -> inInlineText = false
+                    "c" -> {
+                        val raw = cellValue.toString()
+                        val finalValue = when (cellType) {
+                            "s" -> raw.trim().toIntOrNull()?.let { sharedStrings.getOrNull(it) }.orEmpty()
+                            "inlineStr" -> raw
+                            "b" -> if (raw.trim() == "1") "TRUE" else "FALSE"
+                            else -> raw
+                        }
+                        if (cellColumn >= 0) rowCells?.set(cellColumn, finalValue)
                     }
-                }
-                XmlPullParser.END_TAG -> {
-                    when (parser.name.lowercase()) {
-                        "v" -> {
-                            insideValue = false
+                    "row" -> {
+                        val cells = rowCells
+                        if (cells != null && cells.isNotEmpty()) {
+                            val maxColumn = cells.keys.maxOrNull() ?: -1
+                            rows.add((0..maxColumn).map { cells[it].orEmpty() })
                         }
-                        "c" -> {
-                            val raw = currentCellVal.toString().trim()
-                            val finalVal = if (isSharedString) {
-                                val idx = raw.toIntOrNull()
-                                if (idx != null && idx in sharedStrings.indices) sharedStrings[idx] else raw
-                            } else {
-                                raw
-                            }
-                            currentRow.add(finalVal)
-                        }
-                        "row" -> {
-                            if (currentRow.isNotEmpty()) {
-                                rows.add(currentRow)
-                            }
-                        }
+                        rowCells = null
                     }
                 }
             }
-            eventType = parser.next()
+            event = parser.next()
         }
         return rows
     }
 
-    // --- SAMPLE VOTER DATA GENERATOR ---
+// --- SAMPLE VOTER DATA GENERATOR ---
     fun getSampleVoters(): List<Voter> {
         val list = mutableListOf<Voter>()
 
