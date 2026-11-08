@@ -92,6 +92,9 @@ fun VoteCountingScreen(
 ) {
     var showSetupCandidatesDialog by remember { mutableStateOf(false) }
     var candidateNamesInput by remember { mutableStateOf("") }
+    // Search text lives here so typing updates the field instantly (no cursor jumping);
+    // the filtering in the ViewModel catches up in the background.
+    var searchText by remember { mutableStateOf(state.searchQuery) }
     var showResetVotesDialog by remember { mutableStateOf(false) }
     var showResetVotesPinGate by remember { mutableStateOf(false) }
     var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
@@ -250,15 +253,21 @@ fun VoteCountingScreen(
 
             // Search Bar
             OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = onSearchChange,
+                value = searchText,
+                onValueChange = {
+                    searchText = it
+                    onSearchChange(it)
+                },
                 placeholder = { Text("मतदाता का नाम, क्रमांक या EPIC खोजें...") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = null)
                 },
                 trailingIcon = {
-                    if (state.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { onSearchChange("") }) {
+                    if (searchText.isNotEmpty()) {
+                        IconButton(onClick = {
+                            searchText = ""
+                            onSearchChange("")
+                        }) {
                             Icon(imageVector = Icons.Default.Close, contentDescription = "सर्च साफ करें")
                         }
                     }
