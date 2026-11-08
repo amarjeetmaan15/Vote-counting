@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.PersonAdd
@@ -93,6 +94,7 @@ fun VoteCountingScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
+                modifier = Modifier.height(56.dp),
                 title = {
                     Text(
                         text = "Vote Counting (वोट काउंटिंग)",
@@ -244,6 +246,13 @@ fun VoteCountingScreen(
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = null)
                 },
+                trailingIcon = {
+                    if (state.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchChange("") }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "सर्च साफ करें")
+                        }
+                    }
+                },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -289,7 +298,7 @@ fun VoteCountingScreen(
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
             }
@@ -438,9 +447,12 @@ fun VoterCountingCard(
                     text = if (voter.epicNumber.isNotBlank()) "EPIC: ${voter.epicNumber}" else "EPIC: -",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    softWrap = false,
+                    overflow = TextOverflow.Clip
                 )
                 Spacer(modifier = Modifier.width(5.dp))
                 Box(
@@ -490,18 +502,6 @@ fun VoterCountingCard(
                 }
             }
 
-            if (voter.votedCandidateId != null) {
-                val votedCandidate = candidates.find { it.id == voter.votedCandidateId }
-                if (votedCandidate != null) {
-                    Text(
-                        text = "वोट: ${if (votedCandidate.isNota) "NOTA" else votedCandidate.name}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (votedCandidate.isNota) AmberTertiary else VoteGreen
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(6.dp))
 
             // Candidate choices stay on one horizontally scrollable row
@@ -515,8 +515,7 @@ fun VoterCountingCard(
                     val isNota = candidate.isNota
 
                     val bgColor = when {
-                        isSelected && isNota -> AmberTertiary
-                        isSelected -> MaterialTheme.colorScheme.primary
+                        isSelected -> VoteGreen
                         isNota -> AmberContainer.copy(alpha = 0.35f)
                         else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     }
@@ -533,7 +532,7 @@ fun VoterCountingCard(
                             .background(bgColor)
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) (if (isNota) AmberTertiary else MaterialTheme.colorScheme.primary) else Color.Transparent,
+                                color = if (isSelected) VoteGreen else Color.Transparent,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { onSelectCandidate(candidate.id) }
