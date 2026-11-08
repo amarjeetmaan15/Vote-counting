@@ -32,9 +32,20 @@ android {
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
+    create("persistentDebug") {
+      val debugKeystorePath = System.getenv("VOTECOUNTING_DEBUG_KEYSTORE")
+        ?: "${System.getProperty("user.home")}/.android/debug.keystore"
+      storeFile = file(debugKeystorePath)
+      storePassword = "android"
+      keyAlias = "androiddebugkey"
+      keyPassword = "android"
+    }
   }
 
   buildTypes {
+    debug {
+      signingConfig = signingConfigs.getByName("persistentDebug")
+    }
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
@@ -43,7 +54,6 @@ android {
       // AI Studio.
       signingConfig = signingConfigs.getByName("release")
     }
-    // Debug builds use Android Gradle Plugin's standard debug keystore.
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -71,7 +81,7 @@ secrets {
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
 // Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in in the future if needed.
+// Some unused dependencies are commented out below instead of being removed.
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
