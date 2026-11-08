@@ -200,6 +200,9 @@ class VoteRepository(
         require(root.optString("format") == "vote-counting-backup") { "यह Vote Counting की बैकअप फाइल नहीं है" }
         require(root.optInt("version") == 1) { "बैकअप वर्जन सपोर्टेड नहीं है" }
 
+        val currentVoters = voterDao.getAllVotersList()
+        require(currentVoters.isNotEmpty()) { "पहले Excel वोटर लिस्ट अपलोड करें, फिर बैकअप लोड करें" }
+
         val savedCandidates = root.optJSONArray("candidates") ?: JSONArray()
         val oldCandidateNames = mutableMapOf<Long, String>()
         val newCandidates = mutableListOf<Candidate>()
@@ -220,7 +223,6 @@ class VoteRepository(
         val candidateIdByName = currentCandidates.associate { it.name.trim().lowercase() to it.id }
 
         val savedVoters = root.optJSONArray("voters") ?: JSONArray()
-        val currentVoters = voterDao.getAllVotersList()
         fun norm(value: String) = value.trim().lowercase().filter { it.isLetterOrDigit() }
         var restored = 0
         val updates = mutableListOf<Voter>()
