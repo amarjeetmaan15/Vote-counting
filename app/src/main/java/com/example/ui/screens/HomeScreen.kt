@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.QuestionMark
@@ -77,6 +78,7 @@ fun HomeScreen(
     onNavigateToCheckVoters: () -> Unit,
     onNavigateToVoteCounting: () -> Unit,
     onNavigateToRecycleBin: () -> Unit,
+    onNavigateToFile: () -> Unit,
     onFileSelected: (Uri) -> Unit,
     onMoveAllToRecycleBin: () -> Unit,
     onClearAllData: () -> Unit,
@@ -135,19 +137,6 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    if (hasVoters) {
-                        IconButton(
-                            onClick = { showClearConfirmDialog = true },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "हटाएं",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -521,6 +510,29 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        item {
+            Card(
+                onClick = onNavigateToFile,
+                modifier = Modifier.fillMaxWidth().testTag("card_file_management"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.FolderOpen, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("File | फाइल", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Excel Upload, PIN Protection और Data Save / Load", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+            }
         }
     }
 
