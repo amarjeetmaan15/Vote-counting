@@ -3,6 +3,7 @@ package com.example.ui
 import android.app.Application
 import android.content.Context
 import android.net.Uri
+import java.io.IOException
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.AppDatabase
@@ -25,7 +26,8 @@ enum class AppScreen {
     CHECK_VOTERS_RESULTS,
     VOTE_COUNTING,
     VOTE_COUNTING_RESULTS,
-    RECYCLE_BIN
+    RECYCLE_BIN,
+    FILE
 }
 
 data class CheckSummary(
@@ -348,6 +350,33 @@ class VoteViewModel(application: Application) : AndroidViewModel(application) {
     fun clearAllVoters() {
         viewModelScope.launch {
             repository.clearAllVotersData()
+        }
+    }
+
+
+    fun saveBackupToUri(context: Context, uri: Uri, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val backup = repository.createBackupJson()
+                context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(backup.toByteArray(Charsets.UTF_8)) }
+                    ?: throw IOException("बैकअप फाइल नहीं लिखी जा सकी")
+                onResult(true, "डेटा बैकअप सफलतापूर्वक सेव हो गया")
+            } catch (e: Exception) {
+                onResult(false, "बैकअप सेव नहीं हुआ: ${e.message}")
+            }
+        }
+    }
+
+    fun loadBackupFromUri(context: Context, uri: Uri, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                    ?: throw IOException("बैकअप फाइल पढ़ी नहीं जा सकी")
+                val count = repository.restoreBackupJson(json)
+                onResult(true, "$count मतदाताओं की जाँच/वोटिंग प्रगति रिस्टोर हुई")
+            } catch (e: Exception) {
+                onResult(false, "बैकअप रिस्टोर नहीं हुआ: ${e.message}")
+            }
         }
     }
 
