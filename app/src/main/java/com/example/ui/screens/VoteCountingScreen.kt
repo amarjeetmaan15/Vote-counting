@@ -422,6 +422,7 @@ fun VoterCountingCard(
             .fillMaxWidth()
             .testTag("counting_voter_card_${voter.id}"),
         shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
