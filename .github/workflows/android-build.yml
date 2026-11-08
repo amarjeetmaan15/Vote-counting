@@ -20,7 +20,7 @@ jobs:
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      VOTECOUNTING_DEBUG_KEYSTORE: ~/.android/debug.keystore
+      VOTECOUNTING_DEBUG_KEYSTORE: /home/runner/.android/debug.keystore
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
