@@ -20,6 +20,10 @@ jobs:
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      VOTECOUNTING_KEYSTORE_BASE64: ${{ secrets.VOTECOUNTING_KEYSTORE_BASE64 }}
+      VOTECOUNTING_KEYSTORE_PASSWORD: ${{ secrets.VOTECOUNTING_KEYSTORE_PASSWORD }}
+      VOTECOUNTING_KEY_ALIAS: ${{ secrets.VOTECOUNTING_KEY_ALIAS }}
+      VOTECOUNTING_KEY_PASSWORD: ${{ secrets.VOTECOUNTING_KEY_PASSWORD }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -40,17 +44,18 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
-      - name: Generate debug signing keystore
+      - name: Restore persistent APK signing keystore
+        shell: bash
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
+          set -euo pipefail
+          if [[ -z "${VOTECOUNTING_KEYSTORE_BASE64}" || -z "${VOTECOUNTING_KEYSTORE_PASSWORD}" || -z "${VOTECOUNTING_KEY_ALIAS}" || -z "${VOTECOUNTING_KEY_PASSWORD}" ]]; then
+            echo "::error::Add the four VOTECOUNTING_* signing secrets in GitHub repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          printf '%s' "${VOTECOUNTING_KEYSTORE_BASE64}" | base64 --decode > debug.keystore
+          test -s debug.keystore
+          chmod 600 debug.keystore
+
 
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
