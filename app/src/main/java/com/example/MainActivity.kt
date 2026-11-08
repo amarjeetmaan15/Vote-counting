@@ -40,6 +40,7 @@ import com.example.ui.VoteViewModel
 import com.example.ui.screens.CheckVotersResultsScreen
 import com.example.ui.screens.CheckVotersScreen
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.FileManagementScreen
 import com.example.ui.screens.RecycleBinScreen
 import com.example.ui.screens.VoteCountingResultsScreen
 import com.example.ui.screens.VoteCountingScreen
@@ -202,6 +203,7 @@ fun VoteAppMain(
                         onNavigateToRecycleBin = {
                             viewModel.currentScreen.value = AppScreen.RECYCLE_BIN
                         },
+                        onNavigateToFile = { viewModel.currentScreen.value = AppScreen.FILE },
                         onFileSelected = { uri ->
                             viewModel.loadExcelFromUri(context, uri) { success, msg ->
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -272,6 +274,27 @@ fun VoteAppMain(
                         onRestoreAll = { viewModel.restoreAllFromRecycleBin() },
                         onPermanentlyDeleteVoter = { voterId -> viewModel.permanentlyDeleteVoter(voterId) },
                         onEmptyRecycleBin = { viewModel.emptyRecycleBin() }
+                    )
+                }
+
+                AppScreen.FILE -> {
+                    FileManagementScreen(
+                        onBack = { viewModel.currentScreen.value = AppScreen.HOME },
+                        onUploadExcel = { uri ->
+                            viewModel.loadExcelFromUri(context, uri) { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        onSaveBackup = { uri ->
+                            viewModel.saveBackupToUri(context, uri) { _, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        onLoadBackup = { uri ->
+                            viewModel.loadBackupFromUri(context, uri) { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        }
                     )
                 }
             }
