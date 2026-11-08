@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
@@ -85,7 +86,7 @@ fun VoteAppMain(
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 8.dp,
-                        modifier = Modifier.testTag("check_voters_bottom_nav")
+                        modifier = Modifier.height(64.dp).testTag("check_voters_bottom_nav")
                     ) {
                         NavigationBarItem(
                             selected = currentScreen == AppScreen.CHECK_VOTERS,
@@ -124,7 +125,7 @@ fun VoteAppMain(
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 8.dp,
-                        modifier = Modifier.testTag("vote_counting_bottom_nav")
+                        modifier = Modifier.height(64.dp).testTag("vote_counting_bottom_nav")
                     ) {
                         NavigationBarItem(
                             selected = currentScreen == AppScreen.VOTE_COUNTING,
@@ -178,7 +179,7 @@ fun VoteAppMain(
                             if (allVoters.isNotEmpty()) {
                                 viewModel.currentScreen.value = AppScreen.CHECK_VOTERS
                             } else {
-                                Toast.makeText(context, "कृपया पहले Excel अपलोड करें या नमूना डेटा लोड करें", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "कृपया पहले Excel फाइल अपलोड करें", Toast.LENGTH_SHORT).show()
                             }
                         },
                         onNavigateToVoteCounting = {
@@ -194,11 +195,6 @@ fun VoteAppMain(
                         onFileSelected = { uri ->
                             viewModel.loadExcelFromUri(context, uri) { success, msg ->
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                            }
-                        },
-                        onLoadSampleData = {
-                            viewModel.loadSampleData {
-                                Toast.makeText(context, "45 मतदाताओं और 3 वार्डों का नमूना डेटा लोड हो गया!", Toast.LENGTH_SHORT).show()
                             }
                         },
                         onMoveAllToRecycleBin = { viewModel.moveAllToRecycleBin() },
