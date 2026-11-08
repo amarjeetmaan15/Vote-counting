@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -60,6 +61,8 @@ fun FileManagementScreen(
     onUploadExcel: (Uri) -> Unit,
     onSaveBackup: (Uri) -> Unit,
     onLoadBackup: (Uri) -> Unit,
+    hasLoadedData: Boolean,
+    onDeleteLoadedData: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -113,32 +116,34 @@ fun FileManagementScreen(
                         Text(" Excel फाइल", style = MaterialTheme.typography.titleMedium)
                     }
                     Text(
-                        text = uploadedName?.let { "अपलोड की गई फाइल: $it" } ?: "अभी कोई Excel फाइल सेव नहीं है",
+                        text = uploadedName?.let { "अपलोड की गई फाइल: $it" } ?: if (hasLoadedData) "Excel वोटर डेटा ऐप में लोड है" else "अभी कोई Excel फाइल सेव नहीं है",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = {
                             excelPicker.launch(arrayOf(
                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                 "application/vnd.ms-excel", "text/csv", "text/comma-separated-values", "*/*"
                             ))
-                        }, modifier = Modifier.weight(1f)) {
+                        }, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                             Text(" Upload Excel")
                         }
-                        IconButton(
+                        Button(
                             onClick = {
-                                if (prefs.getString("pin_hash", null).isNullOrBlank()) {
-                                    pinInput = ""
-                                    showSetPin = true
-                                } else {
-                                    pinInput = ""
-                                    showVerifyPin = true
-                                }
+                                pinInput = ""
+                                if (prefs.getString("pin_hash", null).isNullOrBlank()) showSetPin = true
+                                else showVerifyPin = true
                             },
-                            enabled = uploadedName != null
+                            enabled = uploadedName != null || hasLoadedData,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
                         ) {
-                            Icon(Icons.Default.DeleteOutline, contentDescription = "PIN से फाइल हटाएं")
+                            Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("  Delete Uploaded File / Loaded Data")
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -237,6 +242,7 @@ fun FileManagementScreen(
                     if (hashPin(pinInput) == prefs.getString("pin_hash", null)) {
                         val fileName = prefs.getString("uploaded_name", null)
                         if (fileName != null) File(File(context.filesDir, "uploaded_excel"), fileName).delete()
+                        onDeleteLoadedData()
                         prefs.edit().remove("uploaded_name").apply()
                         uploadedName = null
                         Toast.makeText(context, "अपलोड की गई फाइल हटा दी गई", Toast.LENGTH_SHORT).show()
