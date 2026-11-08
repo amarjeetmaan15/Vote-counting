@@ -292,7 +292,8 @@ fun VoteCountingScreen(
                 ) {
                     items(
                         items = state.voters,
-                        key = { it.id }
+                        key = { it.id },
+                        contentType = { "voter" }
                     ) { voter ->
                         VoterCountingCard(
                             voter = voter,
