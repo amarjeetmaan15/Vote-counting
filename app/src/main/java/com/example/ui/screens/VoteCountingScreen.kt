@@ -96,6 +96,7 @@ fun VoteCountingScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                modifier = Modifier.height(48.dp),
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
@@ -258,7 +259,8 @@ fun VoteCountingScreen(
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 3.dp)
+                    .height(52.dp)
+                    .padding(horizontal = 12.dp, vertical = 1.dp)
                     .testTag("search_counting_voter_field"),
                 shape = RoundedCornerShape(12.dp)
             )
@@ -457,6 +459,18 @@ fun VoterCountingCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    text = if (voter.epicNumber.isNotBlank()) "EPIC: ${voter.epicNumber}" else "EPIC: -",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
                 IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
                     Icon(
                         imageVector = Icons.Default.DeleteOutline,
@@ -466,22 +480,6 @@ fun VoterCountingCard(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(3.dp))
-
-            Text(
-                text = if (voter.epicNumber.isNotBlank()) "EPIC: ${voter.epicNumber}" else "EPIC: -",
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                softWrap = true,
-                overflow = TextOverflow.Visible
-            )
-
-            Spacer(modifier = Modifier.height(3.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
