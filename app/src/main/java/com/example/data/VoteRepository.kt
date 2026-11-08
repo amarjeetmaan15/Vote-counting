@@ -8,6 +8,8 @@ import com.example.data.entity.AttendanceStatus
 import com.example.data.entity.Candidate
 import com.example.data.entity.Voter
 import com.example.data.entity.Ward
+import org.json.JSONArray
+import org.json.JSONObject
 import com.example.util.ExcelReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -156,4 +158,116 @@ class VoteRepository(
     suspend fun emptyRecycleBin() = withContext(Dispatchers.IO) {
         voterDao.emptyRecycleBin()
     }
+
+    // Portable JSON backup includes voter progress and candidate configuration.
+    suspend fun createBackupJson(): String = withContext(Dispatchers.IO) {
+        val voters = voterDao.getAllVotersIncludingDeleted()
+        val candidates = candidateDao.getCandidatesList()
+        val root = JSONObject()
+            .put("format", "vote-counting-backup")
+            .put("version", 1)
+            .put("createdAt", System.currentTimeMillis())
+        val candidateArray = JSONArray()
+        candidates.forEach { candidate ->
+            candidateArray.put(JSONObject()
+                .put("id", candidate.id)
+                .put("name", candidate.name)
+                .put("number", candidate.candidateNumber)
+                .put("nota", candidate.isNota))
+        }
+        val voterArray = JSONArray()
+        voters.forEach { voter ->
+            voterArray.put(JSONObject()
+                .put("ward", voter.wardNumber)
+                .put("serial", voter.serialNumber)
+                .put("name", voter.name)
+                .put("relative", voter.relativeName)
+                .put("epic", voter.epicNumber)
+                .put("attendance", voter.attendanceStatus.name)
+                .put("candidateId", voter.votedCandidateId ?: JSONObject.NULL)
+                .put("deleted", voter.isDeleted)
+                .put("deletedAt", voter.deletedAt ?: JSONObject.NULL))
+        }
+        root.put("candidates", candidateArray)
+        root.put("voters", voterArray)
+        root.toString(2)
+    }
+
+    // Restore only progress onto the freshly imported Excel list. Match within each ward:
+    // ward+serial first (with identity verification), then EPIC, then name+relative name.
+    suspend fun restoreBackupJson(json: String): Int = withContext(Dispatchers.IO) {
+        val root = JSONObject(json)
+        require(root.optString("format") == "vote-counting-backup") { "यह Vote Counting की बैकअप फाइल नहीं है" }
+        require(root.optInt("version") == 1) { "बैकअप वर्जन सपोर्टेड नहीं है" }
+
+        val savedCandidates = root.optJSONArray("candidates") ?: JSONArray()
+        val oldCandidateNames = mutableMapOf<Long, String>()
+        val newCandidates = mutableListOf<Candidate>()
+        for (i in 0 until savedCandidates.length()) {
+            val item = savedCandidates.getJSONObject(i)
+            val oldId = item.optLong("id")
+            val name = item.optString("name").trim()
+            if (name.isNotEmpty()) {
+                oldCandidateNames[oldId] = name
+                newCandidates.add(Candidate(name = name, candidateNumber = item.optInt("number"), isNota = item.optBoolean("nota")))
+            }
+        }
+        if (newCandidates.isNotEmpty()) {
+            candidateDao.deleteAllCandidates()
+            candidateDao.insertCandidates(newCandidates)
+        }
+        val currentCandidates = candidateDao.getCandidatesList()
+        val candidateIdByName = currentCandidates.associate { it.name.trim().lowercase() to it.id }
+
+        val savedVoters = root.optJSONArray("voters") ?: JSONArray()
+        val currentVoters = voterDao.getAllVotersList()
+        fun norm(value: String) = value.trim().lowercase().filter { it.isLetterOrDigit() }
+        var restored = 0
+        val updates = mutableListOf<Voter>()
+        currentVoters.forEach { current ->
+            val sameWard = (0 until savedVoters.length()).map { savedVoters.getJSONObject(it) }
+                .filter { it.optInt("ward") == current.wardNumber }
+            val serial = norm(current.serialNumber)
+            val epic = norm(current.epicNumber)
+            val name = norm(current.name)
+            val relative = norm(current.relativeName)
+            val match = sameWard.firstOrNull { saved ->
+                val savedSerial = norm(saved.optString("serial"))
+                val savedEpic = norm(saved.optString("epic"))
+                val savedName = norm(saved.optString("name"))
+                val savedRelative = norm(saved.optString("relative"))
+                savedSerial == serial && (
+                    (epic.isNotEmpty() && savedEpic.isNotEmpty() && epic == savedEpic) ||
+                    (savedEpic.isEmpty() || epic.isEmpty()) && name == savedName &&
+                        (relative.isEmpty() || savedRelative.isEmpty() || relative == savedRelative)
+                )
+            } ?: sameWard.firstOrNull {
+                val savedEpic = norm(it.optString("epic"))
+                epic.isNotEmpty() && savedEpic.isNotEmpty() && epic == savedEpic
+            } ?: sameWard.firstOrNull {
+                val savedName = norm(it.optString("name"))
+                val savedRelative = norm(it.optString("relative"))
+                name.isNotEmpty() && name == savedName &&
+                    (relative.isEmpty() || savedRelative.isEmpty() || relative == savedRelative)
+            }
+
+            if (match != null) {
+                val savedOldCandidateId = if (match.isNull("candidateId")) null else match.optLong("candidateId")
+                val savedCandidateName = savedOldCandidateId?.let { oldCandidateNames[it] }
+                val newCandidateId = savedCandidateName?.let { candidateIdByName[it.trim().lowercase()] }
+                val status = runCatching { AttendanceStatus.valueOf(match.optString("attendance", "NONE")) }
+                    .getOrDefault(AttendanceStatus.NONE)
+                updates.add(current.copy(
+                    attendanceStatus = status,
+                    votedCandidateId = newCandidateId,
+                    isDeleted = match.optBoolean("deleted", false),
+                    deletedAt = if (match.isNull("deletedAt")) null else match.optLong("deletedAt")
+                ))
+                restored++
+            }
+        }
+        if (updates.isNotEmpty()) voterDao.insertVoters(updates)
+        restored
+    }
+
 }
