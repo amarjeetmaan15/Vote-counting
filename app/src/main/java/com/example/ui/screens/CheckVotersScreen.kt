@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.entity.AttendanceStatus
 import com.example.data.entity.Voter
 import com.example.ui.CheckVotersUiState
+import com.example.ui.components.PinGateDialog
 import com.example.ui.components.WardFilterRow
 import com.example.ui.theme.AmberTertiary
 import com.example.ui.theme.VoteGreen
@@ -83,6 +84,7 @@ fun CheckVotersScreen(
     modifier: Modifier = Modifier
 ) {
     var showResetDialog by remember { mutableStateOf(false) }
+    var showResetPinGate by remember { mutableStateOf(false) }
     var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
 
     Scaffold(
@@ -336,8 +338,8 @@ fun CheckVotersScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        onResetAttendance()
                         showResetDialog = false
+                        showResetPinGate = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -349,6 +351,18 @@ fun CheckVotersScreen(
                     Text("रद्द करें")
                 }
             }
+        )
+    }
+
+    // PIN check before the attendance reset actually runs
+    if (showResetPinGate) {
+        PinGateDialog(
+            actionLabel = "पुष्टि करें और रीसेट करें",
+            onConfirmed = {
+                onResetAttendance()
+                showResetPinGate = false
+            },
+            onDismiss = { showResetPinGate = false }
         )
     }
 

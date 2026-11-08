@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.entity.Candidate
 import com.example.data.entity.Voter
 import com.example.ui.VoteCountingUiState
+import com.example.ui.components.PinGateDialog
 import com.example.ui.components.WardFilterRow
 import com.example.ui.theme.AmberContainer
 import com.example.ui.theme.AmberTertiary
@@ -92,6 +93,7 @@ fun VoteCountingScreen(
     var showSetupCandidatesDialog by remember { mutableStateOf(false) }
     var candidateNamesInput by remember { mutableStateOf("") }
     var showResetVotesDialog by remember { mutableStateOf(false) }
+    var showResetVotesPinGate by remember { mutableStateOf(false) }
     var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
 
     Scaffold(
@@ -368,8 +370,8 @@ fun VoteCountingScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        onResetVotes()
                         showResetVotesDialog = false
+                        showResetVotesPinGate = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -381,6 +383,18 @@ fun VoteCountingScreen(
                     Text("रद्द करें")
                 }
             }
+        )
+    }
+
+    // PIN check before the vote reset actually runs
+    if (showResetVotesPinGate) {
+        PinGateDialog(
+            actionLabel = "पुष्टि करें और रीसेट करें",
+            onConfirmed = {
+                onResetVotes()
+                showResetVotesPinGate = false
+            },
+            onDismiss = { showResetVotesPinGate = false }
         )
     }
 
