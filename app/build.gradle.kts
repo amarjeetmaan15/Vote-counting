@@ -33,10 +33,11 @@ android {
       keyPassword = System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
+      // The same private keystore is restored by GitHub Actions for every build.
       storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
+      storePassword = System.getenv("VOTECOUNTING_KEYSTORE_PASSWORD") ?: "android"
+      keyAlias = System.getenv("VOTECOUNTING_KEY_ALIAS") ?: "androiddebugkey"
+      keyPassword = System.getenv("VOTECOUNTING_KEY_PASSWORD") ?: "android"
     }
   }
 
