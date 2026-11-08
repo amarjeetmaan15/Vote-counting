@@ -97,6 +97,7 @@ fun VoteCountingScreen(
         topBar = {
             TopAppBar(
                 modifier = Modifier.height(48.dp),
+                titleCentered = true,
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
