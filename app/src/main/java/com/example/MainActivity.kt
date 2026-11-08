@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -92,11 +93,12 @@ fun VoteAppMain(
                             selected = currentScreen == AppScreen.CHECK_VOTERS,
                             onClick = { viewModel.currentScreen.value = AppScreen.CHECK_VOTERS },
                             icon = {
-                                Icon(imageVector = Icons.Default.People, contentDescription = "जाँच सूची")
+                                Icon(imageVector = Icons.Default.People, contentDescription = "जाँच सूची", modifier = Modifier.size(18.dp))
                             },
                             label = {
                                 Text(
                                     text = "मतदाता सूची (Check)",
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (currentScreen == AppScreen.CHECK_VOTERS) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -107,11 +109,12 @@ fun VoteAppMain(
                             selected = currentScreen == AppScreen.CHECK_VOTERS_RESULTS,
                             onClick = { viewModel.currentScreen.value = AppScreen.CHECK_VOTERS_RESULTS },
                             icon = {
-                                Icon(imageVector = Icons.Default.Assessment, contentDescription = "जाँच परिणाम")
+                                Icon(imageVector = Icons.Default.Assessment, contentDescription = "जाँच परिणाम", modifier = Modifier.size(18.dp))
                             },
                             label = {
                                 Text(
                                     text = "जाँच परिणाम (Results)",
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (currentScreen == AppScreen.CHECK_VOTERS_RESULTS) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -131,11 +134,12 @@ fun VoteAppMain(
                             selected = currentScreen == AppScreen.VOTE_COUNTING,
                             onClick = { viewModel.currentScreen.value = AppScreen.VOTE_COUNTING },
                             icon = {
-                                Icon(imageVector = Icons.Default.HowToVote, contentDescription = "मतगणना")
+                                Icon(imageVector = Icons.Default.HowToVote, contentDescription = "मतगणना", modifier = Modifier.size(18.dp))
                             },
                             label = {
                                 Text(
                                     text = "मतगणना (Counting)",
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (currentScreen == AppScreen.VOTE_COUNTING) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -146,11 +150,12 @@ fun VoteAppMain(
                             selected = currentScreen == AppScreen.VOTE_COUNTING_RESULTS,
                             onClick = { viewModel.currentScreen.value = AppScreen.VOTE_COUNTING_RESULTS },
                             icon = {
-                                Icon(imageVector = Icons.Default.EmojiEvents, contentDescription = "गणना परिणाम")
+                                Icon(imageVector = Icons.Default.EmojiEvents, contentDescription = "गणना परिणाम", modifier = Modifier.size(18.dp))
                             },
                             label = {
                                 Text(
                                     text = "गणना परिणाम (Results)",
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (currentScreen == AppScreen.VOTE_COUNTING_RESULTS) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
