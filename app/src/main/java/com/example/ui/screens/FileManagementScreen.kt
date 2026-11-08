@@ -149,8 +149,10 @@ fun FileManagementScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { pinInput = ""; showSetPin = true }) {
-                            Text(if (prefs.getString("pin_hash", null).isNullOrBlank()) "PIN सेट करें" else "PIN बदलें")
+                        if (prefs.getString("pin_hash", null).isNullOrBlank()) {
+                            TextButton(onClick = { pinInput = ""; showSetPin = true }) { Text("PIN सेट करें") }
+                        } else {
+                            Text("PIN सुरक्षा सक्रिय", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
