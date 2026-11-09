@@ -71,6 +71,7 @@ import com.example.data.entity.Candidate
 import com.example.data.entity.Voter
 import com.example.ui.VoteCountingUiState
 import com.example.ui.components.PinGateDialog
+import com.example.ui.components.VoterDetailsDialog
 import com.example.ui.components.WardFilterRow
 import com.example.ui.theme.AmberContainer
 import com.example.ui.theme.AmberTertiary
@@ -98,6 +99,7 @@ fun VoteCountingScreen(
     var showResetVotesDialog by remember { mutableStateOf(false) }
     var showResetVotesPinGate by remember { mutableStateOf(false) }
     var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
+    var selectedVoter by remember { mutableStateOf<Voter?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -314,7 +316,8 @@ fun VoteCountingScreen(
                             onSelectCandidate = { candidateId ->
                                 onSelectCandidateForVoter(voter.id, voter.votedCandidateId, candidateId)
                             },
-                            onDelete = { voterToRecycle = voter }
+                            onDelete = { voterToRecycle = voter },
+                            onNameClick = { selectedVoter = voter }
                         )
                     }
 
@@ -324,6 +327,10 @@ fun VoteCountingScreen(
                 }
             }
         }
+    }
+
+    selectedVoter?.let { voter ->
+        VoterDetailsDialog(voter = voter, onDismiss = { selectedVoter = null })
     }
 
     // Candidate Setup Dialog
@@ -441,6 +448,7 @@ fun VoterCountingCard(
     candidates: List<Candidate>,
     onSelectCandidate: (Long) -> Unit,
     onDelete: () -> Unit = {},
+    onNameClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -515,7 +523,7 @@ fun VoterCountingCard(
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = voter.name,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).clickable(onClick = onNameClick),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
