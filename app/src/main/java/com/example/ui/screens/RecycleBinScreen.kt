@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.data.entity.Voter
+import com.example.ui.components.VoterDetailsDialog
 import com.example.ui.theme.VoteGreen
 import com.example.ui.theme.VoteRed
 
@@ -73,6 +75,7 @@ fun RecycleBinScreen(
     val context = LocalContext.current
     var showEmptyBinDialog by remember { mutableStateOf(false) }
     var voterToDeletePermanently by remember { mutableStateOf<Voter?>(null) }
+    var selectedVoter by remember { mutableStateOf<Voter?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -252,11 +255,16 @@ fun RecycleBinScreen(
                         },
                         onDeletePermanently = {
                             voterToDeletePermanently = voter
-                        }
+                        },
+                        onNameClick = { selectedVoter = voter }
                     )
                 }
             }
         }
+    }
+
+    selectedVoter?.let { voter ->
+        VoterDetailsDialog(voter = voter, onDismiss = { selectedVoter = null })
     }
 
     // Confirmation dialog: Empty entire Recycle Bin
@@ -317,7 +325,8 @@ fun RecycleBinScreen(
 private fun DeletedVoterCard(
     voter: Voter,
     onRestore: () -> Unit,
-    onDeletePermanently: () -> Unit
+    onDeletePermanently: () -> Unit,
+    onNameClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -352,6 +361,7 @@ private fun DeletedVoterCard(
                     Column {
                         Text(
                             text = voter.name,
+                            modifier = Modifier.clickable(onClick = onNameClick),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
