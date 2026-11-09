@@ -65,6 +65,7 @@ import com.example.data.entity.AttendanceStatus
 import com.example.data.entity.Voter
 import com.example.ui.CheckVotersUiState
 import com.example.ui.components.PinGateDialog
+import com.example.ui.components.VoterDetailsDialog
 import com.example.ui.components.WardFilterRow
 import com.example.ui.theme.AmberTertiary
 import com.example.ui.theme.VoteGreen
@@ -89,6 +90,7 @@ fun CheckVotersScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showResetPinGate by remember { mutableStateOf(false) }
     var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
+    var selectedVoter by remember { mutableStateOf<Voter?>(null) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -326,7 +328,8 @@ fun CheckVotersScreen(
                             onToggleAttendance = { target ->
                                 onToggleAttendance(voter.id, voter.attendanceStatus, target)
                             },
-                            onDelete = { voterToRecycle = voter }
+                            onDelete = { voterToRecycle = voter },
+                            onNameClick = { selectedVoter = voter }
                         )
                     }
 
@@ -336,6 +339,10 @@ fun CheckVotersScreen(
                 }
             }
         }
+    }
+
+    selectedVoter?.let { voter ->
+        VoterDetailsDialog(voter = voter, onDismiss = { selectedVoter = null })
     }
 
     // Reset Attendance Dialog
@@ -407,6 +414,7 @@ fun VoterAttendanceCard(
     voter: Voter,
     onToggleAttendance: (AttendanceStatus) -> Unit,
     onDelete: () -> Unit = {},
+    onNameClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -490,7 +498,7 @@ fun VoterAttendanceCard(
                 ) {
                     Text(
                         text = voter.name,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).clickable(onClick = onNameClick),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
