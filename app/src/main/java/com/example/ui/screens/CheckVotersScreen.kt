@@ -87,6 +87,19 @@ fun CheckVotersScreen(
     // Search text lives here so typing updates the field instantly (no cursor jumping);
     // the filtering in the ViewModel catches up in the background.
     var searchText by remember { mutableStateOf(state.searchQuery) }
+    var selectedAttendanceFilter by remember { mutableStateOf<AttendanceStatus?>(null) }
+    val visibleVoters = remember(state.voters, selectedAttendanceFilter) {
+        when (selectedAttendanceFilter) {
+            AttendanceStatus.GREEN,
+            AttendanceStatus.YELLOW,
+            AttendanceStatus.RED,
+            AttendanceStatus.NONE -> state.voters.filter { it.attendanceStatus == selectedAttendanceFilter }
+            null -> state.voters
+        }
+    }
+    fun toggleAttendanceFilter(status: AttendanceStatus) {
+        selectedAttendanceFilter = if (selectedAttendanceFilter == status) null else status
+    }
     var showResetDialog by remember { mutableStateOf(false) }
     var showResetPinGate by remember { mutableStateOf(false) }
     var voterToRecycle by remember { mutableStateOf<Voter?>(null) }
@@ -196,6 +209,12 @@ fun CheckVotersScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
+                                .border(
+                                    width = if (selectedAttendanceFilter == AttendanceStatus.GREEN) 2.dp else 0.dp,
+                                    color = VoteGreen,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable { toggleAttendanceFilter(AttendanceStatus.GREEN) }
                                 .background(MaterialTheme.colorScheme.surface)
                                 .padding(vertical = 6.dp),
                             contentAlignment = Alignment.Center
@@ -215,6 +234,12 @@ fun CheckVotersScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
+                                .border(
+                                    width = if (selectedAttendanceFilter == AttendanceStatus.YELLOW) 2.dp else 0.dp,
+                                    color = AmberTertiary,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable { toggleAttendanceFilter(AttendanceStatus.YELLOW) }
                                 .background(MaterialTheme.colorScheme.surface)
                                 .padding(vertical = 6.dp),
                             contentAlignment = Alignment.Center
@@ -234,6 +259,12 @@ fun CheckVotersScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
+                                .border(
+                                    width = if (selectedAttendanceFilter == AttendanceStatus.RED) 2.dp else 0.dp,
+                                    color = VoteRed,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable { toggleAttendanceFilter(AttendanceStatus.RED) }
                                 .background(MaterialTheme.colorScheme.surface)
                                 .padding(vertical = 6.dp),
                             contentAlignment = Alignment.Center
@@ -253,6 +284,12 @@ fun CheckVotersScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
+                                .border(
+                                    width = if (selectedAttendanceFilter == AttendanceStatus.NONE) 2.dp else 0.dp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable { toggleAttendanceFilter(AttendanceStatus.NONE) }
                                 .background(MaterialTheme.colorScheme.surface)
                                 .padding(vertical = 6.dp),
                             contentAlignment = Alignment.Center
@@ -296,8 +333,8 @@ fun CheckVotersScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // Voters List
-            if (state.voters.isEmpty()) {
+            // Voters List (attendance filter is local to Check Voters only)
+            if (visibleVoters.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -305,7 +342,11 @@ fun CheckVotersScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (state.searchQuery.isNotBlank()) "कोई मतदाता नहीं मिला" else "इस वार्ड में कोई मतदाता नहीं है",
+                        text = when {
+                            state.searchQuery.isNotBlank() -> "कोई मतदाता नहीं मिला"
+                            selectedAttendanceFilter != null -> "इस श्रेणी में कोई मतदाता नहीं है"
+                            else -> "इस वार्ड में कोई मतदाता नहीं है"
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -319,7 +360,7 @@ fun CheckVotersScreen(
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     items(
-                        items = state.voters,
+                        items = visibleVoters,
                         key = { it.id },
                         contentType = { "voter" }
                     ) { voter ->
