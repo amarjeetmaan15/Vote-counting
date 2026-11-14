@@ -25,6 +25,7 @@ data class Voter(
     val serialNumber: String,
     val name: String,
     val relativeName: String,
+    val houseNumber: String = "",
     val epicNumber: String = "",
     val wardNumber: Int,
     val attendanceStatus: AttendanceStatus = AttendanceStatus.NONE,
