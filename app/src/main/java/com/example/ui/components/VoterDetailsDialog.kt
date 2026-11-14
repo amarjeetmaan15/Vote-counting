@@ -38,6 +38,7 @@ fun VoterDetailsDialog(
             ) {
                 VoterDetailRow("वोटर का नाम", voter.name)
                 VoterDetailRow("पिता / पति का नाम", voter.relativeName)
+                VoterDetailRow("मकान नंबर", voter.houseNumber)
                 VoterDetailRow("क्रमांक / Serial No.", voter.serialNumber)
                 VoterDetailRow("वार्ड नंबर", voter.wardNumber.toString())
                 VoterDetailRow("EPIC / वोटर ID", voter.epicNumber.ifBlank { "उपलब्ध नहीं" })
