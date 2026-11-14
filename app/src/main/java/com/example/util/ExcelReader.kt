@@ -111,7 +111,7 @@ object ExcelReader {
             )
         } else {
             // Support both the existing five-column layout and the new six-column layout.
-            val hasHouseColumn = rows.drop(1).any { it.size >= 6 }
+            val hasHouseColumn = rows.any { it.size >= 6 }
             if (hasHouseColumn) ColumnMap(house = 3, epic = 4, ward = 5) else ColumnMap()
         }
 
