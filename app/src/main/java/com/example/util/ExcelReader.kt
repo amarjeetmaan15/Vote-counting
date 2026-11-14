@@ -41,6 +41,7 @@ object ExcelReader {
         val serial: Int = 0,
         val name: Int = 1,
         val relative: Int = 2,
+        val house: Int = -1,
         val epic: Int = 3,
         val ward: Int = 4
     )
@@ -58,6 +59,9 @@ object ExcelReader {
         if (listOf("epic", "epic no", "epic number", "voter id", "voter identity",
                 "identity card", "मतदाता पहचान", "पहचान पत्र", "निर्वाचक फोटो पहचान",
                 "मतदाता परिचय").any { h.contains(it) }) return "epic"
+
+        if (listOf("house", "house no", "house number", "घर नंबर", "घर संख्या",
+                "मकान नंबर", "मकान संख्या").any { h.contains(it) }) return "house"
 
         if (listOf("ward", "ward no", "ward number", "वार्ड", "वार्ड नंबर",
                 "वार्ड क्रमांक").any { h.contains(it) }) return "ward"
@@ -101,12 +105,14 @@ object ExcelReader {
                 serial = mapped["serial"] ?: 0,
                 name = mapped["name"] ?: 1,
                 relative = mapped["relative"] ?: 2,
-                epic = mapped["epic"] ?: 3,
-                ward = mapped["ward"] ?: 4
+                house = mapped["house"] ?: -1,
+                epic = mapped["epic"] ?: if (mapped.containsKey("house")) 4 else 3,
+                ward = mapped["ward"] ?: if (mapped.containsKey("house")) 5 else 4
             )
         } else {
-            // Headerless files must follow the app's documented five-column template.
-            ColumnMap()
+            // Support both the existing five-column layout and the new six-column layout.
+            val hasHouseColumn = rows.drop(1).any { it.size >= 6 }
+            if (hasHouseColumn) ColumnMap(house = 3, epic = 4, ward = 5) else ColumnMap()
         }
 
         val startIndex = if (headerIndex >= 0 && bestHeaderScore >= 2) headerIndex + 1 else 0
@@ -123,6 +129,7 @@ object ExcelReader {
             val serialRaw = row.getOrNull(columns.serial).orEmpty().trim()
             val nameRaw = row.getOrNull(columns.name).orEmpty().trim()
             val relativeRaw = row.getOrNull(columns.relative).orEmpty().trim()
+            val houseRaw = if (columns.house >= 0) row.getOrNull(columns.house).orEmpty().trim() else ""
             val epicRaw = row.getOrNull(columns.epic).orEmpty().trim()
             val wardRaw = row.getOrNull(columns.ward).orEmpty().trim()
 
@@ -137,6 +144,7 @@ object ExcelReader {
                     serialNumber = serial,
                     name = nameRaw,
                     relativeName = relativeRaw,
+                    houseNumber = houseRaw,
                     epicNumber = epicRaw,
                     wardNumber = ward,
                     attendanceStatus = AttendanceStatus.NONE,
