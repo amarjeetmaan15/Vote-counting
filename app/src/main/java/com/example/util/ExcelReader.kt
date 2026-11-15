@@ -47,7 +47,7 @@ object ExcelReader {
         return processRowsToVoters(rows)
     }
 
-    internal fun detectInputFormat(fileName: String, mimeType: String): InputFormat {
+    private fun detectInputFormat(fileName: String, mimeType: String): InputFormat {
         val name = fileName.substringAfterLast('/').lowercase()
         val mime = mimeType.lowercase()
         return when {
