@@ -4,6 +4,7 @@ import com.example.data.dao.CandidateDao
 import com.example.data.dao.VoteDao
 import com.example.data.dao.VoterDao
 import com.example.data.dao.WardDao
+import androidx.room.withTransaction
 import com.example.data.entity.AttendanceStatus
 import com.example.data.entity.Candidate
 import com.example.data.entity.Voter
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class VoteRepository(
+    private val database: AppDatabase,
     private val voterDao: VoterDao,
     private val candidateDao: CandidateDao,
     private val wardDao: WardDao,
@@ -42,14 +44,18 @@ class VoteRepository(
     }
 
     suspend fun loadVotersFromExcel(voters: List<Voter>, wardsFound: List<Int>) = withContext(Dispatchers.IO) {
-        voterDao.clearAllVoters()
-        voterDao.insertVoters(voters)
-
-        // Automatically create Wards extracted from Excel
-        wardDao.deleteAllWards()
-        val distinctWards = if (wardsFound.isNotEmpty()) wardsFound else voters.map { it.wardNumber }.distinct().sorted()
+        require(voters.isNotEmpty()) { "Excel में कोई valid voter record नहीं है" }
+        val distinctWards = if (wardsFound.isNotEmpty()) wardsFound else voters.map { it.wardNumber }.filter { it > 0 }.distinct().sorted()
         val wardsToInsert = distinctWards.map { Ward(wardNumber = it, name = "Ward $it") }
-        wardDao.insertWards(wardsToInsert)
+
+        // Replace voter and ward tables together. A failed insert rolls back the
+        // deletion too, so the previously imported list is never left half-cleared.
+        database.withTransaction {
+            voterDao.clearAllVoters()
+            voterDao.insertVoters(voters)
+            wardDao.deleteAllWards()
+            if (wardsToInsert.isNotEmpty()) wardDao.insertWards(wardsToInsert)
+        }
 
         // Ensure default candidates exist if none setup yet
         val currentCandidates = candidateDao.getCandidatesList().filter { !it.isNota }

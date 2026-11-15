@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.AppDatabase
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import com.example.data.VoteRepository
 import com.example.data.entity.AttendanceStatus
 import com.example.data.entity.Voter
@@ -34,7 +38,7 @@ class ExampleRobolectricTest {
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        repository = VoteRepository(db.voterDao(), db.candidateDao(), db.wardDao(), db.voteDao())
+        repository = VoteRepository(db, db.voterDao(), db.candidateDao(), db.wardDao(), db.voteDao())
     }
 
     @After
@@ -218,4 +222,99 @@ class ExampleRobolectricTest {
         assertEquals(44, activeVoters.size)
         assertEquals(0, deletedVoters.size)
     }
+    @Test
+    fun testNewSixColumnExcelKeepsSatnamWhenHouseContainsWardWord() {
+        val rows = listOf(
+            listOf("सीरियल नंबर", "नाम", "पिता / माता / पति का नाम", "घर नंबर", "EPIC नंबर", "वार्ड नंबर"),
+            listOf("422", "सतनाम सिंह", "लखा सिंह", "वार्ड नं 12", "RGR1544121", "3")
+        )
+        val parsed = ExcelReader.processRowsToVoters(rows)
+        assertEquals(1, parsed.voters.size)
+        assertEquals("सतनाम सिंह", parsed.voters.single().name)
+        assertEquals("वार्ड नं 12", parsed.voters.single().houseNumber)
+        assertEquals(3, parsed.voters.single().wardNumber)
+        assertEquals(0, parsed.skippedRows)
+        assertEquals(1, parsed.wardsFound.size)
+    }
+
+    @Test
+    fun testOldFiveColumnExcelStillImportsWithoutHouseNumber() {
+        val rows = listOf(
+            listOf("सीरियल नंबर", "नाम", "पिता / माता / पति का नाम", "EPIC नंबर", "वार्ड नंबर"),
+            listOf("1", "पुराना मतदाता", "पिता का नाम", "RGR1234567", "1")
+        )
+        val parsed = ExcelReader.processRowsToVoters(rows)
+        assertEquals(1, parsed.voters.size)
+        assertEquals("", parsed.voters.single().houseNumber)
+        assertEquals("RGR1234567", parsed.voters.single().epicNumber)
+        assertEquals(1, parsed.voters.single().wardNumber)
+    }
+
+    @Test
+    fun testWardExtractionUsesWardNumberNotEveryNumberInCell() {
+        assertEquals(12, ExcelReader.extractWardNumber("वार्ड नं 12"))
+        assertEquals(3, ExcelReader.extractWardNumber("Ward 3 / Part 2"))
+        assertEquals(7, ExcelReader.extractWardNumber("७"))
+    }
+
+    @Test
+    fun testCsvParserSupportsQuotedNewlinesAndSemicolonDelimiter() {
+        val csv = "\"Serial\";\"Name\";\"Relative\";\"House\";\"EPIC\";\"Ward\"\r\n" +
+            "\"1\";\"राम सिंह\";\"पिता का नाम\nदूसरी लाइन\";\"01\";\"RGR1234567\";\"3\"\r\n"
+        val rows = ExcelReader.parseCsv(ByteArrayInputStream(csv.toByteArray(Charsets.UTF_8)))
+        assertEquals(2, rows.size)
+        assertEquals("पिता का नाम\nदूसरी लाइन", rows[1][2])
+        assertEquals("01", rows[1][3])
+    }
+
+    @Test
+    fun testXlsxUsesFirstVisibleWorksheetFromWorkbookRelationships() {
+        val bytes = ByteArrayOutputStream()
+        ZipOutputStream(bytes).use { zip ->
+            fun entry(name: String, content: String) {
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
+            entry("xl/workbook.xml", """<?xml version="1.0" encoding="UTF-8"?>
+                <workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <sheets>
+                    <sheet name="Summary" sheetId="1" state="hidden" r:id="rId1"/>
+                    <sheet name="Active Voters" sheetId="2" r:id="rId2"/>
+                  </sheets>
+                </workbook>""")
+            entry("xl/_rels/workbook.xml.rels", """<?xml version="1.0" encoding="UTF-8"?>
+                <Relationships>
+                  <Relationship Id="rId1" Target="worksheets/sheet1.xml"/>
+                  <Relationship Id="rId2" Target="worksheets/sheet2.xml"/>
+                </Relationships>""")
+            entry("xl/worksheets/sheet1.xml", """<worksheet><sheetData>
+                <row r="1"><c r="A1" t="inlineStr"><is><t>Wrong sheet</t></is></c></row>
+                </sheetData></worksheet>""")
+            entry("xl/worksheets/sheet2.xml", """<worksheet><sheetData>
+                <row r="1">
+                  <c r="A1" t="inlineStr"><is><t>सीरियल नंबर</t></is></c>
+                  <c r="B1" t="inlineStr"><is><t>नाम</t></is></c>
+                  <c r="C1" t="inlineStr"><is><t>पिता / माता / पति का नाम</t></is></c>
+                  <c r="D1" t="inlineStr"><is><t>घर नंबर</t></is></c>
+                  <c r="E1" t="inlineStr"><is><t>EPIC नंबर</t></is></c>
+                  <c r="F1" t="inlineStr"><is><t>वार्ड नंबर</t></is></c>
+                </row>
+                <row r="2">
+                  <c r="A2"><v>422</v></c>
+                  <c r="B2" t="inlineStr"><is><t>सतनाम सिंह</t></is></c>
+                  <c r="C2" t="inlineStr"><is><t>लखा सिंह</t></is></c>
+                  <c r="D2" t="inlineStr"><is><t>वार्ड नं 12</t></is></c>
+                  <c r="E2" t="inlineStr"><is><t>RGR1544121</t></is></c>
+                  <c r="F2"><v>3</v></c>
+                </row>
+                </sheetData></worksheet>""")
+        }
+        val rows = ExcelReader.parseXlsx(ByteArrayInputStream(bytes.toByteArray()))
+        val parsed = ExcelReader.processRowsToVoters(rows)
+        assertEquals(1, parsed.voters.size)
+        assertEquals("सतनाम सिंह", parsed.voters.single().name)
+        assertEquals("वार्ड नं 12", parsed.voters.single().houseNumber)
+    }
+
 }

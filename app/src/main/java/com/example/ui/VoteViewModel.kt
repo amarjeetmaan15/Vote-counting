@@ -88,6 +88,7 @@ data class ResultsUiState(
 class VoteViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
     private val repository = VoteRepository(
+        database,
         database.voterDao(),
         database.candidateDao(),
         database.wardDao(),
@@ -313,7 +314,12 @@ class VoteViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
                 repository.loadVotersFromExcel(parsedData.voters, parsedData.wardsFound)
-                onResult(true, "${parsedData.voters.size} वोटर्स और ${parsedData.wardsFound.size} वार्ड लोड किए गए!")
+                val report = mutableListOf<String>()
+                if (parsedData.skippedRows > 0) report.add("छूटी हुई rows: ${parsedData.skippedRows}")
+                if (parsedData.votersWithoutWard > 0) report.add("Ward के बिना voters: ${parsedData.votersWithoutWard}")
+                if (parsedData.duplicateEpicRows > 0) report.add("Duplicate EPIC: ${parsedData.duplicateEpicRows}")
+                val suffix = if (report.isEmpty()) "कोई parsing warning नहीं।" else "जाँच: " + report.joinToString(", ")
+                onResult(true, "${parsedData.voters.size} वोटर्स और ${parsedData.wardsFound.size} वार्ड लोड किए गए। ${suffix}")
             } catch (e: Exception) {
                 onResult(false, "फाइल पढ़ने में त्रुटि: ${e.message}")
             }
