@@ -60,6 +60,9 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
+      - name: Run Excel parser and app unit tests
+        run: gradle --no-daemon testFastUnitTest
+
       - name: Build fast (non-debuggable) APK
         run: gradle --no-daemon assembleFast
 
