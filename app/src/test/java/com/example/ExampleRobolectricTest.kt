@@ -278,8 +278,9 @@ class ExampleRobolectricTest {
             }
             entry("xl/workbook.xml", """<?xml version="1.0" encoding="UTF-8"?>
                 <workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <bookViews><workbookView activeTab="1"/></bookViews>
                   <sheets>
-                    <sheet name="Summary" sheetId="1" state="hidden" r:id="rId1"/>
+                    <sheet name="Summary" sheetId="1" r:id="rId1"/>
                     <sheet name="Active Voters" sheetId="2" r:id="rId2"/>
                   </sheets>
                 </workbook>""")

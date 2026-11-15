@@ -344,18 +344,25 @@ object ExcelReader {
     private fun firstVisibleSheetRelationshipId(stream: InputStream): String? {
         val parser = XmlPullParserFactory.newInstance().newPullParser()
         parser.setInput(stream, "UTF-8")
-        var firstId: String? = null
+        var activeTab = 0
+        val sheets = mutableListOf<Pair<String?, Boolean>>()
         var event = parser.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
-            if (event == XmlPullParser.START_TAG && localName(parser.name) == "sheet") {
-                val id = attributeByLocalName(parser, "id")
-                if (firstId == null) firstId = id
-                val state = attributeByLocalName(parser, "state").orEmpty()
-                if (state != "hidden" && state != "veryHidden") return id
+            if (event == XmlPullParser.START_TAG) {
+                when (localName(parser.name)) {
+                    "workbookView" -> activeTab = attributeByLocalName(parser, "activeTab")?.toIntOrNull() ?: activeTab
+                    "sheet" -> {
+                        val id = attributeByLocalName(parser, "id")
+                        val state = attributeByLocalName(parser, "state").orEmpty()
+                        sheets.add(id to (state != "hidden" && state != "veryHidden"))
+                    }
+                }
             }
             event = parser.next()
         }
-        return firstId
+        val activeSheet = sheets.getOrNull(activeTab)
+        return if (activeSheet?.second == true) activeSheet.first
+        else sheets.firstOrNull { it.second }?.first
     }
 
     private fun worksheetTarget(stream: InputStream, relationshipId: String): String? {
